@@ -1,7 +1,7 @@
 --!strict
 -- Neon Surge server bootstrap
 
-local GameService = require(script.Services.GameService)
+local GameService = require(script.Parent.Services.GameService)
 
 GameService.start()
 print("[NeonSurge] Server online — arena live")
