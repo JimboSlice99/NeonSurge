@@ -82,8 +82,8 @@ local Config = {
 		Magenta = Color3.fromRGB(255, 45, 180),
 		Violet = Color3.fromRGB(140, 80, 255),
 		Lime = Color3.fromRGB(120, 255, 90),
-		Floor = Color3.fromRGB(8, 10, 22),
-		Wall = Color3.fromRGB(18, 24, 48),
+		Floor = Color3.fromRGB(20, 28, 55),
+		Wall = Color3.fromRGB(40, 50, 90),
 		Accent = Color3.fromRGB(0, 200, 255),
 	},
 

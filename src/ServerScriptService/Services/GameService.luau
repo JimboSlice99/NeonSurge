@@ -229,7 +229,9 @@ local function gameLoop()
 end
 
 function GameService.start()
+	print("[NeonSurge] Building arena...")
 	ArenaBuilder.build()
+	print("[NeonSurge] Arena ready")
 	Remotes.init()
 	CombatService.init()
 	EnemyService.init({

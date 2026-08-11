@@ -25,42 +25,42 @@
 
     "Lighting": {
       "$properties": {
-        "Ambient": [0.05, 0.08, 0.18],
-        "Brightness": 1.4,
-        "ClockTime": 0,
-        "FogColor": [0.02, 0.04, 0.12],
-        "FogEnd": 220,
-        "FogStart": 40,
+        "Ambient": [0.25, 0.28, 0.4],
+        "Brightness": 2.2,
+        "ClockTime": 20,
+        "FogColor": [0.05, 0.08, 0.18],
+        "FogEnd": 400,
+        "FogStart": 120,
         "GlobalShadows": true,
-        "OutdoorAmbient": [0.08, 0.1, 0.22],
+        "OutdoorAmbient": [0.2, 0.22, 0.35],
         "Technology": "ShadowMap"
       },
       "Atmosphere": {
         "$className": "Atmosphere",
         "$properties": {
-          "Color": [0.12, 0.18, 0.4],
-          "Decay": [0.35, 0.2, 0.55],
-          "Density": 0.35,
-          "Glare": 0.2,
-          "Haze": 1.4,
-          "Offset": 0.1
+          "Color": [0.2, 0.28, 0.5],
+          "Decay": [0.25, 0.18, 0.4],
+          "Density": 0.18,
+          "Glare": 0.15,
+          "Haze": 0.6,
+          "Offset": 0.05
         }
       },
       "ColorCorrection": {
         "$className": "ColorCorrectionEffect",
         "$properties": {
-          "Brightness": 0.02,
-          "Contrast": 0.15,
-          "Saturation": 0.25,
-          "TintColor": [0.9, 0.95, 1.1]
+          "Brightness": 0.05,
+          "Contrast": 0.12,
+          "Saturation": 0.2,
+          "TintColor": [0.95, 0.98, 1.1]
         }
       },
       "Bloom": {
         "$className": "BloomEffect",
         "$properties": {
-          "Intensity": 0.85,
-          "Size": 28,
-          "Threshold": 0.9
+          "Intensity": 0.7,
+          "Size": 24,
+          "Threshold": 0.85
         }
       }
     },

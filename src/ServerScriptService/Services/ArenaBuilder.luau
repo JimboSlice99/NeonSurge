@@ -44,7 +44,7 @@ function ArenaBuilder.build()
 	local radius = Config.Arena.Radius
 	local floorY = Config.Arena.FloorY
 
-	-- Dark arena floor with neon ring
+	-- Visible arena floor
 	neonPart({
 		name = "ArenaFloor",
 		size = Vector3.new(radius * 2.2, 1, radius * 2.2),
@@ -54,15 +54,41 @@ function ArenaBuilder.build()
 		parent = arena,
 	})
 
+	-- Neon grid so the floor reads clearly
+	local gridStep = 10
+	local gridExtent = math.floor(radius)
+	for x = -gridExtent, gridExtent, gridStep do
+		neonPart({
+			name = ("GridX_%d"):format(x),
+			size = Vector3.new(0.35, 0.2, radius * 2),
+			cframe = CFrame.new(x, floorY + 0.1, 0),
+			color = Config.Palette.Cyan,
+			transparency = 0.35,
+			canCollide = false,
+			parent = arena,
+		})
+	end
+	for z = -gridExtent, gridExtent, gridStep do
+		neonPart({
+			name = ("GridZ_%d"):format(z),
+			size = Vector3.new(radius * 2, 0.2, 0.35),
+			cframe = CFrame.new(0, floorY + 0.1, z),
+			color = Config.Palette.Magenta,
+			transparency = 0.45,
+			canCollide = false,
+			parent = arena,
+		})
+	end
+
 	-- Concentric neon lanes (cylinder laid flat on the arena floor)
 	for i, color in ipairs({ Config.Palette.Cyan, Config.Palette.Magenta, Config.Palette.Violet }) do
 		local r = radius * (0.35 + i * 0.18)
 		local lane = neonPart({
 			name = ("LaneRing_%d"):format(i),
-			size = Vector3.new(0.15, r * 2, r * 2),
-			cframe = CFrame.new(0, floorY + 0.08, 0) * CFrame.Angles(0, 0, math.rad(90)),
+			size = Vector3.new(0.35, r * 2, r * 2),
+			cframe = CFrame.new(0, floorY + 0.2, 0) * CFrame.Angles(0, 0, math.rad(90)),
 			color = color,
-			transparency = 0.55,
+			transparency = 0.25,
 			canCollide = false,
 			parent = arena,
 		})
