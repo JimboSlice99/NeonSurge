@@ -108,6 +108,23 @@ function ArenaBuilder.build()
 	pylonLight.Range = 40
 	pylonLight.Parent = pylon
 
+	-- Force a reliable spawn on the arena floor
+	local oldSpawn = Workspace:FindFirstChildWhichIsA("SpawnLocation")
+	if oldSpawn then
+		oldSpawn:Destroy()
+	end
+	local spawn = Instance.new("SpawnLocation")
+	spawn.Name = "NeonSpawn"
+	spawn.Anchored = true
+	spawn.Duration = 0
+	spawn.Neutral = true
+	spawn.Size = Vector3.new(8, 1, 8)
+	spawn.CFrame = CFrame.new(0, floorY + 0.5, 0)
+	spawn.Color = Config.Palette.Cyan
+	spawn.Material = Enum.Material.Neon
+	spawn.Transparency = 0.35
+	spawn.Parent = arena
+
 	-- Hide default baseplate under the neon floor if present
 	local baseplate = Workspace:FindFirstChild("Baseplate")
 	if baseplate and baseplate:IsA("BasePart") then
