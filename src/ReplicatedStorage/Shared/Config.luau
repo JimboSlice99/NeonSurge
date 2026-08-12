@@ -1,8 +1,8 @@
 --!strict
--- Neon Surge — tower defense. Defend the Surge Core.
+-- Surge — industrial tower defense. Defend the core.
 
 local Config = {
-	GameName = "NEON SURGE",
+	GameName = "SURGE",
 	Tagline = "Hold the core.",
 
 	Core = {
@@ -34,7 +34,7 @@ local Config = {
 			range = 18,
 			damage = 8,
 			fireRate = 3.2,
-			color = Color3.fromRGB(70, 210, 220),
+			color = Color3.fromRGB(150, 145, 130),
 			upgrades = {
 				{ cost = 50, damage = 12, fireRate = 3.8, range = 20 },
 				{ cost = 90, damage = 18, fireRate = 4.4, range = 22 },
@@ -49,7 +49,7 @@ local Config = {
 			damage = 28,
 			fireRate = 1.1,
 			pierce = 2,
-			color = Color3.fromRGB(150, 110, 230),
+			color = Color3.fromRGB(100, 110, 125),
 			upgrades = {
 				{ cost = 90, damage = 40, fireRate = 1.25, range = 26 },
 				{ cost = 150, damage = 60, fireRate = 1.4, range = 28 },
@@ -64,7 +64,7 @@ local Config = {
 			damage = 4,
 			fireRate = 2.0,
 			slow = 0.45,
-			color = Color3.fromRGB(120, 180, 255),
+			color = Color3.fromRGB(130, 145, 155),
 			upgrades = {
 				{ cost = 70, damage = 6, fireRate = 2.3, range = 18, slow = 0.55 },
 				{ cost = 120, damage = 9, fireRate = 2.6, range = 20, slow = 0.65 },
@@ -79,7 +79,7 @@ local Config = {
 			damage = 22,
 			fireRate = 0.85,
 			splash = 10,
-			color = Color3.fromRGB(230, 130, 70),
+			color = Color3.fromRGB(160, 110, 70),
 			upgrades = {
 				{ cost = 120, damage = 32, fireRate = 0.95, range = 24, splash = 12 },
 				{ cost = 200, damage = 48, fireRate = 1.05, range = 26, splash = 14 },
@@ -88,10 +88,10 @@ local Config = {
 	},
 
 	Enemies = {
-		Runner = { health = 40, speed = 14, leak = 1, color = Color3.fromRGB(80, 220, 200), reward = 6 },
-		Tank = { health = 160, speed = 8, leak = 2, color = Color3.fromRGB(220, 90, 140), reward = 14 },
-		Swift = { health = 28, speed = 22, leak = 1, color = Color3.fromRGB(180, 230, 90), reward = 8 },
-		Boss = { health = 900, speed = 7, leak = 5, color = Color3.fromRGB(170, 110, 255), reward = 80 },
+		Runner = { health = 40, speed = 14, leak = 1, color = Color3.fromRGB(120, 115, 100), reward = 6 },
+		Tank = { health = 160, speed = 8, leak = 2, color = Color3.fromRGB(90, 85, 80), reward = 14 },
+		Swift = { health = 28, speed = 22, leak = 1, color = Color3.fromRGB(140, 125, 95), reward = 8 },
+		Boss = { health = 900, speed = 7, leak = 5, color = Color3.fromRGB(70, 68, 72), reward = 80 },
 	},
 
 	Monetization = {
@@ -125,19 +125,20 @@ local Config = {
 	},
 
 	Palette = {
-		Cyan = Color3.fromRGB(70, 210, 220),
-		Magenta = Color3.fromRGB(210, 70, 140),
-		Violet = Color3.fromRGB(150, 110, 230),
-		Orange = Color3.fromRGB(230, 130, 70),
-		Lime = Color3.fromRGB(140, 220, 120),
-		Gold = Color3.fromRGB(230, 195, 95),
-		Path = Color3.fromRGB(28, 32, 44),
-		Build = Color3.fromRGB(24, 40, 48),
-		Floor = Color3.fromRGB(10, 12, 18),
-		Panel = Color3.fromRGB(9, 11, 18),
-		Danger = Color3.fromRGB(220, 70, 90),
-		Text = Color3.fromRGB(232, 238, 246),
-		Muted = Color3.fromRGB(130, 140, 160),
+		-- Kept key names for compatibility; values are matte industrial, not neon.
+		Cyan = Color3.fromRGB(200, 170, 120), -- warm accent (was cyan)
+		Magenta = Color3.fromRGB(160, 90, 70),
+		Violet = Color3.fromRGB(110, 120, 140),
+		Orange = Color3.fromRGB(180, 120, 70),
+		Lime = Color3.fromRGB(120, 140, 100),
+		Gold = Color3.fromRGB(190, 160, 100),
+		Path = Color3.fromRGB(55, 52, 48),
+		Build = Color3.fromRGB(70, 68, 62),
+		Floor = Color3.fromRGB(42, 40, 38),
+		Panel = Color3.fromRGB(28, 28, 30),
+		Danger = Color3.fromRGB(170, 60, 55),
+		Text = Color3.fromRGB(230, 225, 215),
+		Muted = Color3.fromRGB(140, 135, 125),
 	},
 
 	RemotesFolderName = "NeonSurgeRemotes",

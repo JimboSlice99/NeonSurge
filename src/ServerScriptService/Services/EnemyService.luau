@@ -140,8 +140,8 @@ function EnemyService.spawn(kind: EnemyKind, wave: number): Model
 	root.CastShadow = false
 	root.Size = if kind == "Boss" then Vector3.new(4.5, 4.5, 4.5) elseif kind == "Tank" then Vector3.new(3.2, 3.2, 3.2) else Vector3.new(2, 2, 2)
 	root.Color = def.color
-	root.Material = Enum.Material.Neon
-	root.Transparency = 0.12
+	root.Material = Enum.Material.SmoothPlastic
+	root.Transparency = 0
 	root.Shape = Enum.PartType.Ball
 	root.CFrame = CFrame.new(waypoints[1] or Vector3.new(0, 2, 0))
 	root.Parent = model
@@ -150,24 +150,17 @@ function EnemyService.spawn(kind: EnemyKind, wave: number): Model
 	shell.Name = "Shell"
 	shell.Anchored = true
 	shell.CanCollide = false
-	shell.Size = root.Size * 1.15
+	shell.Size = root.Size * 1.2
 	shell.Color = Color3.fromRGB(
-		math.floor(def.color.R * 255 * 0.25),
-		math.floor(def.color.G * 255 * 0.25),
-		math.floor(def.color.B * 255 * 0.25)
+		math.floor(def.color.R * 255 * 0.45),
+		math.floor(def.color.G * 255 * 0.45),
+		math.floor(def.color.B * 255 * 0.45)
 	)
-	shell.Material = Enum.Material.SmoothPlastic
-	shell.Transparency = 0.35
+	shell.Material = Enum.Material.Metal
+	shell.Transparency = 0.25
 	shell.Shape = Enum.PartType.Ball
 	shell.CFrame = root.CFrame
 	shell.Parent = model
-
-	local hl = Instance.new("Highlight")
-	hl.FillColor = def.color
-	hl.OutlineColor = def.color
-	hl.FillTransparency = 0.9
-	hl.OutlineTransparency = 0.45
-	hl.Parent = model
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.MaxHealth = def.health * hpScale

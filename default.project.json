@@ -7,48 +7,48 @@
     "StarterPlayer": {
       "StarterPlayerScripts": { "$path": "src/StarterPlayer/StarterPlayerScripts" },
       "$properties": {
-        "CameraMaxZoomDistance": 80,
+        "CameraMaxZoomDistance": 90,
         "CameraMinZoomDistance": 20,
         "CharacterWalkSpeed": 20
       }
     },
     "Lighting": {
       "$properties": {
-        "Ambient": [0.07, 0.08, 0.12],
-        "Brightness": 0.8,
-        "ClockTime": 0.25,
-        "FogColor": [0.02, 0.03, 0.06],
-        "FogEnd": 220,
-        "FogStart": 70,
+        "Ambient": [0.28, 0.26, 0.24],
+        "Brightness": 1.6,
+        "ClockTime": 14.5,
+        "FogColor": [0.45, 0.42, 0.38],
+        "FogEnd": 320,
+        "FogStart": 120,
         "GlobalShadows": true,
-        "OutdoorAmbient": [0.1, 0.11, 0.16],
+        "OutdoorAmbient": [0.32, 0.3, 0.28],
         "Technology": "ShadowMap"
       },
       "Atmosphere": {
         "$className": "Atmosphere",
         "$properties": {
-          "Density": 0.25,
-          "Haze": 1.4,
-          "Glare": 0.04,
-          "Color": [0.08, 0.1, 0.16],
-          "Decay": [0.16, 0.1, 0.24]
+          "Density": 0.22,
+          "Haze": 1.2,
+          "Glare": 0.08,
+          "Color": [0.55, 0.5, 0.42],
+          "Decay": [0.35, 0.3, 0.22]
         }
       },
       "Bloom": {
         "$className": "BloomEffect",
         "$properties": {
-          "Intensity": 0.25,
-          "Size": 14,
-          "Threshold": 1.45
+          "Intensity": 0.12,
+          "Size": 10,
+          "Threshold": 2.2
         }
       },
       "ColorCorrection": {
         "$className": "ColorCorrectionEffect",
         "$properties": {
-          "Brightness": -0.04,
-          "Contrast": 0.16,
-          "Saturation": -0.06,
-          "TintColor": [0.88, 0.93, 1.05]
+          "Brightness": 0.02,
+          "Contrast": 0.08,
+          "Saturation": -0.12,
+          "TintColor": [1.02, 0.98, 0.92]
         }
       }
     },
@@ -58,10 +58,10 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Color": [0.05, 0.06, 0.1],
+          "Color": [0.22, 0.2, 0.18],
           "Size": [220, 1, 180],
           "Position": [0, -0.5, 0],
-          "Material": "SmoothPlastic"
+          "Material": "Concrete"
         }
       }
     }

@@ -82,7 +82,7 @@ function Lobby.mount(playCallback: () -> ())
 	tag.TextWrapped = true
 	tag.TextXAlignment = Enum.TextXAlignment.Left
 	tag.TextColor3 = Config.Palette.Muted
-	tag.Text = "Tower defense. Place neon nodes on the conduit path. Keep hostiles from breaching the Surge Core."
+	tag.Text = "Tower defense. Place turrets on the path. Stop hostiles from reaching the core."
 	tag.Parent = panel
 
 	creditsLabel = Instance.new("TextLabel")
@@ -107,7 +107,7 @@ function Lobby.mount(playCallback: () -> ())
 	bestLabel.Text = "Best wave 0"
 	bestLabel.Parent = panel
 
-	local play = btn(panel, "START DEFENSE", UDim2.new(1, -28, 0, 48), UDim2.fromOffset(14, 152), Config.Palette.Cyan, Color3.fromRGB(8, 14, 20))
+	local play = btn(panel, "START DEFENSE", UDim2.new(1, -28, 0, 48), UDim2.fromOffset(14, 152), Color3.fromRGB(180, 150, 100), Color3.fromRGB(20, 18, 14))
 	play.TextSize = 18
 	play.Font = Enum.Font.GothamBlack
 	play.MouseButton1Click:Connect(function()

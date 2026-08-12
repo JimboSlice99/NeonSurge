@@ -111,16 +111,9 @@ local function buildModel(kind: TowerId, plot: BasePart, level: number): Model
 	head.Size = Vector3.new(2.2, 2.2, 2.2)
 	head.CFrame = stem.CFrame * CFrame.new(0, stem.Size.Y * 0.55, 0)
 	head.Color = def.color
-	head.Material = Enum.Material.Neon
-	head.Transparency = 0.15
+	head.Material = Enum.Material.Metal
+	head.Transparency = 0
 	head.Parent = model
-
-	local hl = Instance.new("Highlight")
-	hl.FillColor = def.color
-	hl.OutlineColor = def.color
-	hl.FillTransparency = 0.9
-	hl.OutlineTransparency = 0.45
-	hl.Parent = model
 
 	model.PrimaryPart = base
 	model.Parent = towerFolder()
@@ -136,10 +129,11 @@ local function fireProjectile(from: Vector3, target: Model, damage: number, colo
 	bolt.Shape = Enum.PartType.Ball
 	bolt.Size = Vector3.new(0.55, 0.55, 0.55)
 	bolt.Color = color
-	bolt.Material = Enum.Material.Neon
+	bolt.Material = Enum.Material.SmoothPlastic
 	bolt.Anchored = true
 	bolt.CanCollide = false
 	bolt.CastShadow = false
+	bolt.Transparency = 0.15
 	bolt.CFrame = CFrame.new(from)
 	bolt.Parent = Workspace
 

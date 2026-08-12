@@ -1,5 +1,5 @@
 --!strict
--- Neon conduit map: winding path, build plots, surge core.
+-- Industrial facility map — concrete, steel, no neon materials.
 
 local Workspace = game:GetService("Workspace")
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
@@ -30,7 +30,7 @@ local function part(props: {
 	p.Size = props.size
 	p.CFrame = props.cframe
 	p.Color = props.color
-	p.Material = props.material or Enum.Material.SmoothPlastic
+	p.Material = props.material or Enum.Material.Concrete
 	p.Transparency = props.transparency or 0
 	p.TopSurface = Enum.SurfaceType.Smooth
 	p.BottomSurface = Enum.SurfaceType.Smooth
@@ -49,16 +49,63 @@ function MapBuilder.build(): MapData
 	folder.Name = "NeonMap"
 	folder.Parent = Workspace
 
-	-- Floor
+	-- Ground slab
 	part({
 		name = "Floor",
-		size = Vector3.new(180, 2, 140),
-		cframe = CFrame.new(0, -1, 0),
+		size = Vector3.new(200, 3, 160),
+		cframe = CFrame.new(0, -1.5, 0),
 		color = Config.Palette.Floor,
+		material = Enum.Material.Concrete,
 		parent = folder,
 	})
 
-	-- Path waypoints (serpentine)
+	-- Hangar walls
+	part({
+		name = "WallN",
+		size = Vector3.new(200, 24, 3),
+		cframe = CFrame.new(0, 10, -78),
+		color = Color3.fromRGB(48, 46, 44),
+		material = Enum.Material.Concrete,
+		parent = folder,
+	})
+	part({
+		name = "WallS",
+		size = Vector3.new(200, 24, 3),
+		cframe = CFrame.new(0, 10, 78),
+		color = Color3.fromRGB(48, 46, 44),
+		material = Enum.Material.Concrete,
+		parent = folder,
+	})
+	part({
+		name = "WallW",
+		size = Vector3.new(3, 24, 160),
+		cframe = CFrame.new(-98, 10, 0),
+		color = Color3.fromRGB(48, 46, 44),
+		material = Enum.Material.Concrete,
+		parent = folder,
+	})
+	part({
+		name = "WallE",
+		size = Vector3.new(3, 24, 160),
+		cframe = CFrame.new(98, 10, 0),
+		color = Color3.fromRGB(48, 46, 44),
+		material = Enum.Material.Concrete,
+		parent = folder,
+	})
+
+	-- Ceiling beams (readable space, not void)
+	for x = -80, 80, 20 do
+		part({
+			name = "Beam",
+			size = Vector3.new(2, 2, 150),
+			cframe = CFrame.new(x, 22, 0),
+			color = Color3.fromRGB(60, 58, 54),
+			material = Enum.Material.Metal,
+			canCollide = false,
+			parent = folder,
+		})
+	end
+
 	local waypoints = {
 		Vector3.new(-70, 1.5, -40),
 		Vector3.new(-40, 1.5, -40),
@@ -72,44 +119,41 @@ function MapBuilder.build(): MapData
 		Vector3.new(70, 1.5, 20),
 	}
 
-	-- Draw path segments
 	for i = 1, #waypoints - 1 do
 		local a = waypoints[i]
 		local b = waypoints[i + 1]
 		local mid = (a + b) / 2
 		local delta = b - a
 		local length = delta.Magnitude
-		local path = part({
+		part({
 			name = "Path",
-			size = Vector3.new(math.max(length, 1), 0.4, 8),
+			size = Vector3.new(math.max(length, 1), 0.5, 9),
 			cframe = CFrame.lookAt(mid, b) * CFrame.Angles(0, math.rad(90), 0),
 			color = Config.Palette.Path,
+			material = Enum.Material.Slate,
 			parent = folder,
 		})
-		-- edge glow strips
+		-- Matte curb lines (not glowing)
 		part({
-			name = "PathEdge",
-			size = Vector3.new(math.max(length, 1), 0.15, 0.25),
-			cframe = path.CFrame * CFrame.new(0, 0.2, 3.6),
-			color = Config.Palette.Cyan,
-			material = Enum.Material.Neon,
-			transparency = 0.55,
+			name = "Curb",
+			size = Vector3.new(math.max(length, 1), 0.2, 0.35),
+			cframe = CFrame.lookAt(mid, b) * CFrame.Angles(0, math.rad(90), 0) * CFrame.new(0, 0.25, 4.2),
+			color = Color3.fromRGB(90, 85, 75),
+			material = Enum.Material.SmoothPlastic,
 			canCollide = false,
 			parent = folder,
 		})
 		part({
-			name = "PathEdge",
-			size = Vector3.new(math.max(length, 1), 0.15, 0.25),
-			cframe = path.CFrame * CFrame.new(0, 0.2, -3.6),
-			color = Config.Palette.Magenta,
-			material = Enum.Material.Neon,
-			transparency = 0.65,
+			name = "Curb",
+			size = Vector3.new(math.max(length, 1), 0.2, 0.35),
+			cframe = CFrame.lookAt(mid, b) * CFrame.Angles(0, math.rad(90), 0) * CFrame.new(0, 0.25, -4.2),
+			color = Color3.fromRGB(90, 85, 75),
+			material = Enum.Material.SmoothPlastic,
 			canCollide = false,
 			parent = folder,
 		})
 	end
 
-	-- Build plots beside path
 	local plotOffsets = {
 		{ i = 1, side = 12 },
 		{ i = 1, side = -12 },
@@ -148,70 +192,90 @@ function MapBuilder.build(): MapData
 			size = Vector3.new(7, 0.5, 7),
 			cframe = CFrame.new(pos.X, 0.25, pos.Z),
 			color = Config.Palette.Build,
+			material = Enum.Material.Metal,
 			parent = folder,
 		})
 		plot:SetAttribute("PlotId", index)
 		plot:SetAttribute("Occupied", false)
-		local ring = part({
-			name = "PlotRing",
-			size = Vector3.new(0.15, 7.4, 7.4),
-			cframe = CFrame.new(pos.X, 0.4, pos.Z) * CFrame.Angles(0, 0, math.rad(90)),
-			color = Config.Palette.Cyan,
-			material = Enum.Material.Neon,
-			transparency = 0.7,
+		-- etched square marker
+		part({
+			name = "PlotMark",
+			size = Vector3.new(6.2, 0.08, 0.15),
+			cframe = CFrame.new(pos.X, 0.55, pos.Z + 3),
+			color = Config.Palette.Gold,
+			material = Enum.Material.SmoothPlastic,
 			canCollide = false,
 			parent = folder,
 		})
-		ring.Shape = Enum.PartType.Cylinder
+		part({
+			name = "PlotMark",
+			size = Vector3.new(6.2, 0.08, 0.15),
+			cframe = CFrame.new(pos.X, 0.55, pos.Z - 3),
+			color = Config.Palette.Gold,
+			material = Enum.Material.SmoothPlastic,
+			canCollide = false,
+			parent = folder,
+		})
 		table.insert(plots, plot)
 	end
 
-	-- Entrance gate
 	part({
 		name = "Gate",
-		size = Vector3.new(12, 10, 2),
-		cframe = CFrame.new(waypoints[1] + Vector3.new(-4, 4, 0)),
-		color = Color3.fromRGB(20, 24, 36),
-		parent = folder,
-	})
-	part({
-		name = "GateLight",
-		size = Vector3.new(10, 0.4, 0.4),
-		cframe = CFrame.new(waypoints[1] + Vector3.new(-4, 8, 0)),
-		color = Config.Palette.Orange,
-		material = Enum.Material.Neon,
-		transparency = 0.2,
-		canCollide = false,
+		size = Vector3.new(14, 12, 3),
+		cframe = CFrame.new(waypoints[1] + Vector3.new(-5, 5, 0)),
+		color = Color3.fromRGB(58, 56, 52),
+		material = Enum.Material.Metal,
 		parent = folder,
 	})
 
-	-- Surge Core
 	local corePos = waypoints[#waypoints] + Vector3.new(8, 0, 0)
 	local core = part({
 		name = "SurgeCore",
-		size = Vector3.new(8, 10, 8),
-		cframe = CFrame.new(corePos.X, 5, corePos.Z),
-		color = Color3.fromRGB(18, 22, 34),
+		size = Vector3.new(10, 12, 10),
+		cframe = CFrame.new(corePos.X, 6, corePos.Z),
+		color = Color3.fromRGB(52, 50, 48),
+		material = Enum.Material.Metal,
 		parent = folder,
 	})
-	local coreGlow = part({
-		name = "CoreGlow",
-		size = Vector3.new(6, 6, 6),
-		cframe = CFrame.new(corePos.X, 5, corePos.Z),
-		color = Config.Palette.Violet,
-		material = Enum.Material.Neon,
-		transparency = 0.35,
+	part({
+		name = "CoreBand",
+		size = Vector3.new(10.4, 1.2, 10.4),
+		cframe = CFrame.new(corePos.X, 8, corePos.Z),
+		color = Config.Palette.Gold,
+		material = Enum.Material.SmoothPlastic,
 		canCollide = false,
 		parent = folder,
 	})
-	coreGlow.Shape = Enum.PartType.Ball
+	-- Soft practical light only
 	local light = Instance.new("PointLight")
-	light.Color = Config.Palette.Violet
-	light.Brightness = 0.7
-	light.Range = 28
-	light.Parent = coreGlow
+	light.Color = Color3.fromRGB(255, 220, 180)
+	light.Brightness = 0.55
+	light.Range = 30
+	light.Parent = core
 
-	-- Spawn for players (viewing platform)
+	-- Sparse warm hangar lights
+	for _, pos in ipairs({
+		Vector3.new(-40, 18, -20),
+		Vector3.new(0, 18, 10),
+		Vector3.new(40, 18, -10),
+		Vector3.new(20, 18, 40),
+	}) do
+		local lamp = part({
+			name = "Lamp",
+			size = Vector3.new(4, 0.6, 4),
+			cframe = CFrame.new(pos),
+			color = Color3.fromRGB(200, 190, 160),
+			material = Enum.Material.SmoothPlastic,
+			canCollide = false,
+			parent = folder,
+		})
+		local pl = Instance.new("PointLight")
+		pl.Color = Color3.fromRGB(255, 230, 190)
+		pl.Brightness = 0.4
+		pl.Range = 40
+		pl.Parent = lamp
+	end
+
 	for _, old in Workspace:GetChildren() do
 		if old:IsA("SpawnLocation") then
 			old:Destroy()
@@ -223,27 +287,26 @@ function MapBuilder.build(): MapData
 	spawn.Duration = 0
 	spawn.Neutral = true
 	spawn.Size = Vector3.new(10, 1, 10)
-	spawn.CFrame = CFrame.new(0, 18, 70)
-	spawn.Transparency = 0.3
-	spawn.Color = Color3.fromRGB(30, 50, 58)
+	spawn.CFrame = CFrame.new(0, 14, 62)
+	spawn.Transparency = 0.2
+	spawn.Color = Color3.fromRGB(70, 68, 62)
+	spawn.Material = Enum.Material.Concrete
 	spawn.Parent = folder
 
-	-- Viewing deck
 	part({
 		name = "Deck",
-		size = Vector3.new(40, 1, 20),
-		cframe = CFrame.new(0, 17, 70),
-		color = Color3.fromRGB(16, 20, 30),
+		size = Vector3.new(44, 1.2, 22),
+		cframe = CFrame.new(0, 13, 62),
+		color = Color3.fromRGB(50, 48, 44),
+		material = Enum.Material.Concrete,
 		parent = folder,
 	})
 	part({
 		name = "Rail",
-		size = Vector3.new(40, 2, 0.4),
-		cframe = CFrame.new(0, 18.5, 60),
-		color = Config.Palette.Cyan,
-		material = Enum.Material.Neon,
-		transparency = 0.5,
-		canCollide = false,
+		size = Vector3.new(44, 1.5, 0.5),
+		cframe = CFrame.new(0, 14.5, 52),
+		color = Color3.fromRGB(90, 85, 75),
+		material = Enum.Material.Metal,
 		parent = folder,
 	})
 

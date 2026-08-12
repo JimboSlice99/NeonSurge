@@ -18,9 +18,9 @@ local function spark(position: Vector3, color: Color3, scale: number)
 	part.Anchored = true
 	part.CanCollide = false
 	part.CastShadow = false
-	part.Material = Enum.Material.Neon
+	part.Material = Enum.Material.SmoothPlastic
 	part.Color = color
-	part.Transparency = 0.25
+	part.Transparency = 0.35
 	part.Size = Vector3.new(scale, scale, scale)
 	part.CFrame = CFrame.new(position)
 	part.Parent = Workspace
