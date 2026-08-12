@@ -1,30 +1,66 @@
 --!strict
 
-export type EnemyKind = "Runner" | "Bruiser" | "Boss"
-
-export type GamePhase = "Lobby" | "Countdown" | "Wave" | "Intermission" | "GameOver"
-
-export type PlayerStats = {
-	health: number,
-	maxHealth: number,
-	score: number,
-	combo: number,
-	kills: number,
-	wave: number,
-	dashReady: boolean,
+export type PlotSave = {
+	seedId: string?,
+	plantedAt: number,
 }
 
-export type HudSnapshot = {
-	phase: GamePhase,
-	wave: number,
-	score: number,
-	combo: number,
-	kills: number,
-	health: number,
-	maxHealth: number,
-	enemiesAlive: number,
-	countdown: number?,
-	message: string?,
+export type PlayerData = {
+	coins: number,
+	ownedSeeds: { [string]: number },
+	ownedTools: { [string]: boolean },
+	equippedTool: string,
+	unlockedZones: { [string]: boolean },
+	plots: { [string]: PlotSave },
+	ownedPasses: { [string]: boolean },
+	rebirths: number,
+	lastDailyDay: number,
+	tutorialDone: boolean,
+	stats: {
+		planted: number,
+		harvested: number,
+		earned: number,
+	},
+}
+
+export type PlotRuntime = {
+	id: string,
+	zoneId: string,
+	model: Model,
+	base: BasePart,
+	seedId: string?,
+	plantedAt: number,
+	readyAt: number,
+}
+
+export type HudPayload = {
+	coins: number,
+	ownedSeeds: { [string]: number },
+	ownedTools: { [string]: boolean },
+	unlockedZones: { [string]: boolean },
+	equippedTool: string,
+	selectedSeed: string,
+	ownedPasses: { [string]: boolean },
+	rebirths: number,
+	rebirthCost: number,
+	coinMult: number,
+	goalText: string,
+	dailyReady: boolean,
+	dailyAmount: number,
+	tutorialDone: boolean,
+	stats: {
+		planted: number,
+		harvested: number,
+		earned: number,
+	},
+}
+
+export type HarvestFxPayload = {
+	plotId: string,
+	amount: number,
+	position: Vector3,
+	color: Color3,
+	sound: string?,
 }
 
 return {}
