@@ -10,7 +10,6 @@ local Remotes = require(game:GetService("ReplicatedStorage"):WaitForChild("Share
 local SoundUtil = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("SoundUtil"))
 
 local FxController = {}
-
 local player = Players.LocalPlayer
 
 local function spark(position: Vector3, color: Color3, scale: number)
@@ -21,15 +20,15 @@ local function spark(position: Vector3, color: Color3, scale: number)
 	part.CastShadow = false
 	part.Material = Enum.Material.Neon
 	part.Color = color
-	part.Transparency = 0.2
+	part.Transparency = 0.25
 	part.Size = Vector3.new(scale, scale, scale)
 	part.CFrame = CFrame.new(position)
 	part.Parent = Workspace
-	TweenService:Create(part, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = Vector3.new(scale * 2.2, scale * 2.2, scale * 2.2),
+	TweenService:Create(part, TweenInfo.new(0.2), {
+		Size = Vector3.new(scale * 2.4, scale * 2.4, scale * 2.4),
 		Transparency = 1,
 	}):Play()
-	Debris:AddItem(part, 0.25)
+	Debris:AddItem(part, 0.22)
 end
 
 function FxController.start()
@@ -38,22 +37,34 @@ function FxController.start()
 			return
 		end
 		local color = if typeof(payload.color) == "Color3" then payload.color else Config.Palette.Cyan
-		if payload.kind == "hit" then
-			if typeof(payload.position) == "Vector3" then
-				spark(payload.position, color, 0.45)
-			end
-		elseif payload.kind == "kill" then
-			if typeof(payload.position) == "Vector3" then
-				spark(payload.position, color, 0.9)
-			end
-		elseif payload.kind == "dash" then
-			if typeof(payload.position) == "Vector3" then
-				spark(payload.position, color, 0.7)
-			end
+		if payload.kind == "hit" and typeof(payload.position) == "Vector3" then
+			spark(payload.position, color, 0.4)
+		elseif payload.kind == "kill" and typeof(payload.position) == "Vector3" then
+			spark(payload.position, color, 0.85)
+		elseif payload.kind == "dash" and typeof(payload.position) == "Vector3" then
+			spark(payload.position, color, 0.65)
+		elseif payload.kind == "slamImpact" and typeof(payload.position) == "Vector3" then
+			spark(payload.position, color, 1.6)
+			local ring = Instance.new("Part")
+			ring.Anchored = true
+			ring.CanCollide = false
+			ring.CastShadow = false
+			ring.Material = Enum.Material.Neon
+			ring.Color = color
+			ring.Transparency = 0.4
+			ring.Size = Vector3.new(0.3, 2, 2)
+			ring.CFrame = CFrame.new(payload.position) * CFrame.Angles(0, 0, math.rad(90))
+			ring.Shape = Enum.PartType.Cylinder
+			ring.Parent = Workspace
+			TweenService:Create(ring, TweenInfo.new(0.28), {
+				Size = Vector3.new(0.2, 28, 28),
+				Transparency = 1,
+			}):Play()
+			Debris:AddItem(ring, 0.3)
 		elseif payload.kind == "pickup" then
-			SoundUtil.play("Pickup", 0.2)
+			SoundUtil.play("Pickup", 0.18)
 		elseif payload.kind == "hurt" then
-			SoundUtil.play("Hurt", 0.35)
+			SoundUtil.play("Hurt", 0.3)
 			local gui = player:FindFirstChild("PlayerGui")
 			if not gui then
 				return
@@ -64,11 +75,11 @@ function FxController.start()
 			local frame = Instance.new("Frame")
 			frame.Size = UDim2.fromScale(1, 1)
 			frame.BackgroundColor3 = Config.Palette.Danger
-			frame.BackgroundTransparency = 0.78
+			frame.BackgroundTransparency = 0.82
 			frame.BorderSizePixel = 0
 			frame.Parent = flash
-			TweenService:Create(frame, TweenInfo.new(0.28), { BackgroundTransparency = 1 }):Play()
-			Debris:AddItem(flash, 0.3)
+			TweenService:Create(frame, TweenInfo.new(0.25), { BackgroundTransparency = 1 }):Play()
+			Debris:AddItem(flash, 0.28)
 		end
 	end)
 end

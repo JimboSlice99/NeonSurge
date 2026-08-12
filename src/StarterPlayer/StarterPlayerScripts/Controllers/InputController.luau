@@ -3,7 +3,7 @@
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 
 local Remotes = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Remotes"))
 
@@ -61,7 +61,20 @@ function InputController.start()
 		end
 		Remotes.get("RequestRestart"):FireServer()
 		return Enum.ContextActionResult.Sink
-	end, false, Enum.KeyCode.R, Enum.KeyCode.ButtonY)
+	end, false, Enum.KeyCode.R)
+
+	UserInputService.InputBegan:Connect(function(input, processed)
+		if processed or not armed then
+			return
+		end
+		if input.KeyCode == Enum.KeyCode.One then
+			Remotes.get("RequestWeapon"):FireServer("Pulse")
+		elseif input.KeyCode == Enum.KeyCode.Two then
+			Remotes.get("RequestWeapon"):FireServer("Shatter")
+		elseif input.KeyCode == Enum.KeyCode.Three then
+			Remotes.get("RequestWeapon"):FireServer("Rail")
+		end
+	end)
 
 	RunService.RenderStepped:Connect(function()
 		if not armed then
@@ -74,8 +87,6 @@ function InputController.start()
 		end
 		Remotes.get("RequestFire"):FireServer(aimDirection())
 	end)
-
-	local _ = Workspace
 end
 
 return InputController

@@ -1,6 +1,8 @@
 --!strict
+-- Mission director: timed surge, style ranks, weapon unlocks, vertical combat.
 
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local Remotes = require(game:GetService("ReplicatedStorage").Shared.Remotes)
@@ -18,6 +20,7 @@ type GamePhase = Types.GamePhase
 type HudSnapshot = Types.HudSnapshot
 type EnemyKind = Types.EnemyKind
 type RunStats = Types.RunStats
+type StyleRank = Types.StyleRank
 type LobbySnapshot = Types.LobbySnapshot
 
 local GameService = {}
@@ -25,8 +28,9 @@ local GameService = {}
 type RunState = {
 	active: boolean,
 	phase: GamePhase,
-	wave: number,
+	timeLeft: number,
 	score: number,
+	style: number,
 	kills: number,
 	combo: number,
 	comboExpire: number,
@@ -37,18 +41,36 @@ type RunState = {
 	maxHealth: number,
 	stats: RunStats,
 	leech: boolean,
+	ownedUnlocks: { [string]: boolean },
 	pendingUpgrades: { Types.UpgradeOption }?,
 	token: number,
+	spawnAcc: number,
+	nextElite: number,
 }
 
 local runs: { [Player]: RunState } = {}
 
 local function xpNeed(level: number): number
-	return math.floor(Config.Player.XpToLevelBase * (Config.Player.XpToLevelGrowth ^ (level - 1)))
+	return math.floor(Config.Combat.XpBase * (Config.Combat.XpGrowth ^ (level - 1)))
 end
 
 local function metaLevel(player: Player, id: string): number
 	return DataService.getMetaLevel(player, id)
+end
+
+local function styleRank(style: number): StyleRank
+	if style >= 6000 then
+		return "SS"
+	elseif style >= 3500 then
+		return "S"
+	elseif style >= 2000 then
+		return "A"
+	elseif style >= 1000 then
+		return "B"
+	elseif style >= 400 then
+		return "C"
+	end
+	return "D"
 end
 
 local function buildLobby(player: Player): LobbySnapshot
@@ -71,6 +93,7 @@ local function buildLobby(player: Player): LobbySnapshot
 		credits = data.credits,
 		highScore = data.highScore,
 		bestWave = data.bestWave,
+		bestRank = tostring(data.meta.bestRank or "D"),
 		ownsDoubleCredits = MonetizationService.owns(player, "DoubleCredits"),
 		ownsVipTrail = MonetizationService.owns(player, "VipTrail"),
 		ownsExtraDash = MonetizationService.owns(player, "ExtraDash"),
@@ -90,49 +113,50 @@ local function ensureRun(player: Player): RunState
 	local state: RunState = {
 		active = false,
 		phase = "Lobby",
-		wave = 0,
+		timeLeft = Config.Director.MissionSeconds,
 		score = 0,
+		style = 0,
 		kills = 0,
 		combo = 0,
 		comboExpire = 0,
 		xp = 0,
 		level = 1,
 		creditsRun = 0,
-		health = Config.Player.BaseMaxHealth,
-		maxHealth = Config.Player.BaseMaxHealth,
+		health = 100,
+		maxHealth = 100,
 		stats = Upgrades.defaultRunStats(),
 		leech = false,
+		ownedUnlocks = {},
 		pendingUpgrades = nil,
 		token = 0,
+		spawnAcc = 0,
+		nextElite = Config.Director.EliteEvery,
 	}
 	runs[player] = state
 	return state
 end
 
-local function applyCombatProfile(player: Player, state: RunState)
+local function applyProfile(player: Player, state: RunState)
 	local damageMeta = 1 + metaLevel(player, "damage") * 0.12
-	local fireMeta = 1 + metaLevel(player, "fireRate") * 0.08
-	local dashMeta = 1 - metaLevel(player, "dash") * 0.08
+	local moveMeta = 1 + metaLevel(player, "mobility") * 0.06
+	local dashMeta = (1 - metaLevel(player, "mobility") * 0.05) * state.stats.dashCooldownMul
 	if MonetizationService.owns(player, "ExtraDash") then
 		dashMeta *= 0.75
 	end
-
 	CombatService.setProfile(player, {
-		damage = Config.Player.BaseDamage * state.stats.damageMul * damageMeta,
-		fireRate = Config.Player.BaseFireRate * state.stats.fireRateMul * fireMeta,
-		projectileSpeed = Config.Player.BaseProjectileSpeed,
-		projectileCount = state.stats.projectileCount,
-		pierce = state.stats.pierce,
-		dashCooldown = Config.Player.DashCooldown * state.stats.dashCooldownMul * math.max(dashMeta, 0.4),
+		damageMul = state.stats.damageMul * damageMeta,
+		fireRateMul = state.stats.fireRateMul,
+		dashCooldown = Config.Movement.DashCooldown * math.max(dashMeta, 0.4),
+		weapons = state.stats.weapons,
+		activeWeapon = state.stats.activeWeapon,
 	})
-
-	local magnet = state.stats.pickupMul * (1 + metaLevel(player, "magnet") * 0.2)
-	PickupService.setMagnetMul(player, magnet)
+	PickupService.setMagnetMul(player, state.stats.pickupMul * (1 + metaLevel(player, "magnet") * 0.2))
 
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		humanoid.WalkSpeed = Config.Player.BaseWalkSpeed * state.stats.moveMul
+		humanoid.WalkSpeed = Config.Movement.WalkSpeed * state.stats.moveMul * moveMeta
+		humanoid.JumpPower = Config.Movement.JumpPower
 		humanoid.MaxHealth = state.maxHealth
 		humanoid.Health = math.min(state.health, state.maxHealth)
 	end
@@ -141,10 +165,13 @@ end
 local function hudFor(player: Player, message: string?, countdown: number?): HudSnapshot
 	local state = ensureRun(player)
 	local data = DataService.get(player)
+	local weaponName = Config.Weapons[state.stats.activeWeapon].name
 	return {
 		phase = state.phase,
-		wave = state.wave,
+		timeLeft = math.max(0, state.timeLeft),
 		score = state.score,
+		style = math.floor(state.style),
+		styleRank = styleRank(state.style),
 		level = state.level,
 		xp = state.xp,
 		xpNeed = xpNeed(state.level),
@@ -154,9 +181,10 @@ local function hudFor(player: Player, message: string?, countdown: number?): Hud
 		health = state.health,
 		maxHealth = state.maxHealth,
 		enemiesAlive = EnemyService.count(),
+		weapon = weaponName,
 		combo = state.combo,
-		countdown = countdown,
 		message = message,
+		countdown = countdown,
 		highScore = data.highScore,
 	}
 end
@@ -166,58 +194,77 @@ local function pushHud(player: Player, message: string?, countdown: number?)
 end
 
 local function computeMaxHealth(player: Player, state: RunState): number
-	return math.max(
-		20,
-		Config.Player.BaseMaxHealth + metaLevel(player, "maxHp") * 15 + state.stats.maxHealthBonus
-	)
+	return math.max(25, 100 + metaLevel(player, "maxHp") * 15 + state.stats.maxHealthBonus)
 end
 
-local function teleportToArena(player: Player)
+local function teleportSpawn(player: Player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if root and root:IsA("BasePart") then
-		root.CFrame = CFrame.new(0, Config.Arena.FloorY + 5, 12)
+		root.CFrame = CFrame.new(0, Config.Arena.FloorY + 5, 20)
 	end
 end
 
-local function endRun(player: Player)
+local function addStyle(player: Player, amount: number, label: string)
+	local state = ensureRun(player)
+	if not state.active then
+		return
+	end
+	local styleMeta = 1 + metaLevel(player, "style") * 0.1
+	local gained = amount * state.stats.styleMul * styleMeta * (1 + math.min(state.combo, 20) * 0.04)
+	state.style += gained
+	state.score += math.floor(gained * 0.35)
+	Remotes.get("StylePop"):FireClient(player, { label = label, rank = styleRank(state.style), amount = math.floor(gained) })
+end
+
+local function endRun(player: Player, survived: boolean)
 	local state = ensureRun(player)
 	if not state.active and state.phase == "Lobby" then
 		return
 	end
 	state.active = false
-	state.phase = "GameOver"
+	state.phase = "Results"
 	player:SetAttribute("RunActive", false)
 
 	local mul = MonetizationService.creditMultiplier(player)
-	local banked = math.floor(state.creditsRun * Config.Economy.CreditKeepRatio * mul)
-	local beat = DataService.noteScore(player, state.score, state.wave)
+	local styleBonus = math.floor(state.style * Config.Economy.StyleCreditBonus)
+	local banked = math.floor((state.creditsRun + styleBonus) * Config.Economy.CreditKeepRatio * mul)
+	if survived then
+		banked = math.floor(banked * 1.35)
+	end
+	local beat = DataService.noteScore(player, state.score, math.floor(Config.Director.MissionSeconds - state.timeLeft))
 	if beat then
 		banked += Config.Economy.HighScoreBonus
+	end
+	local rank = styleRank(state.style)
+	local data = DataService.get(player)
+	local order = { D = 1, C = 2, B = 3, A = 4, S = 5, SS = 6 }
+	local prev = tostring(data.meta.bestRank or "D")
+	if (order[rank] or 0) > (order[prev] or 0) then
+		data.meta.bestRank = rank
+		DataService.markDirty(player)
 	end
 	DataService.addCredits(player, banked)
 	DataService.save(player)
 
 	EnemyService.clear()
 	PickupService.clear()
-	local msg = ("BANKED %d CREDITS"):format(banked)
-	if beat then
-		msg ..= " · NEW HIGH SCORE"
-	end
+	local msg = if survived
+		then ("EXTRACTED · %s · +%d cr"):format(rank, banked)
+		else ("DOWNED · %s · +%d cr"):format(rank, banked)
 	pushHud(player, msg)
 	pushLobby(player)
 end
 
 local function damagePlayer(player: Player, amount: number)
 	local state = ensureRun(player)
-	if not state.active or state.phase == "GameOver" or state.phase == "LevelUp" then
+	if not state.active or state.phase == "LevelUp" or state.phase == "Results" then
 		return
 	end
 	local character = player.Character
 	if character and character:GetAttribute("IFrames") == true then
 		return
 	end
-
 	state.health = math.max(0, state.health - amount)
 	state.combo = 0
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -226,31 +273,28 @@ local function damagePlayer(player: Player, amount: number)
 	end
 	Remotes.get("FxBurst"):FireClient(player, { kind = "hurt", color = Config.Palette.Danger })
 	pushHud(player)
-
 	if state.health <= 0 then
-		endRun(player)
+		endRun(player, false)
 	end
 end
 
 local function offerLevelUp(player: Player)
 	local state = ensureRun(player)
 	state.phase = "LevelUp"
-	state.pendingUpgrades = Upgrades.rollOptions(3)
-	SoundUtil.play("LevelUp", 0.45)
+	state.pendingUpgrades = Upgrades.rollOptions(3, state.ownedUnlocks)
+	SoundUtil.play("LevelUp", 0.4)
 	Remotes.get("UpgradeChoices"):FireClient(player, state.pendingUpgrades)
-	pushHud(player, "CHOOSE AN UPGRADE")
+	pushHud(player, "CHOOSE A PROTOCOL")
 end
 
 local function grantXp(player: Player, amount: number)
 	local state = ensureRun(player)
 	state.xp += amount
 	local need = xpNeed(state.level)
-	while state.xp >= need do
+	if state.xp >= need then
 		state.xp -= need
 		state.level += 1
-		need = xpNeed(state.level)
 		offerLevelUp(player)
-		break
 	end
 end
 
@@ -262,26 +306,21 @@ local function onEnemyDied(player: Player?, kind: EnemyKind, score: number, xp: 
 	if not state.active then
 		return
 	end
-
 	local now = os.clock()
 	if now <= state.comboExpire then
 		state.combo += 1
 	else
 		state.combo = 1
 	end
-	state.comboExpire = now + 2.4
+	state.comboExpire = now + 2.6
 	state.kills += 1
-
-	local mult = 1 + math.min(state.combo, 15) * 0.12
-	local kindMul = if kind == "Boss" then 1.15 else 1
-	local gained = math.floor(score * mult * kindMul)
-	state.score += gained
+	local mult = 1 + math.min(state.combo, 18) * 0.1
+	state.score += math.floor(score * mult)
 	state.creditsRun += credits
-
 	PickupService.spawnXp(position, xp)
-
+	addStyle(player, if kind == "Elite" then 120 else 20 + state.combo * 2, if kind == "Elite" then "ELITE DOWN" else "KILL")
 	if state.leech then
-		state.health = math.min(state.maxHealth, state.health + 2)
+		state.health = math.min(state.maxHealth, state.health + 3)
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			humanoid.Health = state.health
@@ -290,69 +329,21 @@ local function onEnemyDied(player: Player?, kind: EnemyKind, score: number, xp: 
 	pushHud(player)
 end
 
-local function pickKind(wave: number, index: number, total: number): EnemyKind
-	if wave % Config.Waves.BossEvery == 0 and index == total then
-		return "Boss"
+local function pickKind(intensity: number, forceElite: boolean): EnemyKind
+	if forceElite then
+		return "Elite"
 	end
 	local roll = math.random()
-	if wave >= 4 and roll < 0.18 + wave * 0.02 then
+	if intensity > 0.55 and roll < 0.12 then
 		return "Bruiser"
 	end
-	if wave >= 2 and roll < 0.45 then
-		return "Shooter"
+	if intensity > 0.25 and roll < 0.35 then
+		return "Gunner"
 	end
-	return "Runner"
-end
-
-local function runWave(player: Player, wave: number, token: number)
-	local state = ensureRun(player)
-	if state.token ~= token or not state.active then
-		return
+	if roll < 0.55 then
+		return "Skitter"
 	end
-
-	state.phase = "Wave"
-	state.wave = wave
-	pushHud(player, ("WAVE %d"):format(wave))
-
-	local total = Config.Waves.BaseEnemyCount + (wave - 1) * Config.Waves.EnemiesPerWave
-	for i = 1, total do
-		if state.token ~= token or not state.active or state.phase == "GameOver" then
-			return
-		end
-		while state.phase == "LevelUp" do
-			task.wait(0.1)
-			if state.token ~= token or not state.active then
-				return
-			end
-		end
-		while EnemyService.count() >= Config.Waves.MaxAlive do
-			task.wait(0.2)
-			if state.token ~= token or not state.active then
-				return
-			end
-		end
-		EnemyService.spawn(pickKind(wave, i, total), wave)
-		pushHud(player)
-		task.wait(math.max(0.22, Config.Waves.SpawnInterval - wave * 0.015))
-	end
-
-	while EnemyService.count() > 0 and state.active and state.token == token and state.phase ~= "GameOver" do
-		while state.phase == "LevelUp" do
-			task.wait(0.1)
-			if state.token ~= token or not state.active then
-				return
-			end
-		end
-		task.wait(0.2)
-		pushHud(player)
-	end
-
-	if state.active and state.token == token and state.phase ~= "GameOver" then
-		state.creditsRun += Config.Economy.WaveClearBonus
-		state.phase = "Intermission"
-		pushHud(player, "WAVE CLEAR", Config.Waves.Intermission)
-		task.wait(Config.Waves.Intermission)
-	end
+	return "Wisp"
 end
 
 local function startRun(player: Player)
@@ -364,99 +355,90 @@ local function startRun(player: Player)
 	PickupService.clear()
 	state.active = true
 	state.phase = "Countdown"
-	state.wave = 0
+	state.timeLeft = Config.Director.MissionSeconds
 	state.score = 0
+	state.style = 0
 	state.kills = 0
 	state.combo = 0
-	state.comboExpire = 0
 	state.xp = 0
 	state.level = 1
 	state.creditsRun = 0
 	state.stats = Upgrades.defaultRunStats()
 	state.leech = false
+	state.ownedUnlocks = {}
 	state.pendingUpgrades = nil
+	state.spawnAcc = 0
+	state.nextElite = Config.Director.EliteEvery
 	state.maxHealth = computeMaxHealth(player, state)
 	state.health = state.maxHealth
 	player:SetAttribute("RunActive", true)
 
-	teleportToArena(player)
-	applyCombatProfile(player, state)
+	teleportSpawn(player)
+	applyProfile(player, state)
 
-	-- VIP trail cosmetic
-	local character = player.Character
-	if character and MonetizationService.owns(player, "VipTrail") then
-		local root = character:FindFirstChild("HumanoidRootPart")
-		if root and root:IsA("BasePart") and not root:FindFirstChild("VipAura") then
-			local aura = Instance.new("PointLight")
-			aura.Name = "VipAura"
-			aura.Color = Config.Palette.Gold
-			aura.Brightness = 0.6
-			aura.Range = 12
-			aura.Shadows = false
-			aura.Parent = root
-		end
-	end
-
-	for i = Config.Waves.Countdown, 1, -1 do
+	for i = Config.Director.Countdown, 1, -1 do
 		if state.token ~= token or not state.active then
 			return
 		end
-		pushHud(player, "SURGE INCOMING", i)
+		pushHud(player, "DISTRICT SURGE", i)
 		task.wait(1)
 	end
 
-	local wave = 0
-	while state.active and state.token == token and state.phase ~= "GameOver" do
-		wave += 1
-		runWave(player, wave, token)
-		if not state.active or state.token ~= token or state.phase == "GameOver" then
+	state.phase = "Mission"
+	pushHud(player, "CLEAR THE DISTRICT")
+	SoundUtil.play("Style", 0.3)
+
+	while state.active and state.token == token and state.phase ~= "Results" do
+		local dt = 0.2
+		task.wait(dt)
+		if state.phase == "LevelUp" then
+			continue
+		end
+		if not state.active or state.token ~= token then
+			break
+		end
+
+		state.timeLeft -= dt
+		local elapsed = Config.Director.MissionSeconds - state.timeLeft
+		local intensity = math.clamp(elapsed * Config.Director.IntensityRamp, 0, 1.4)
+
+		state.spawnAcc += dt
+		local interval = math.max(0.28, 0.85 - intensity * 0.45)
+		if state.spawnAcc >= interval and EnemyService.count() < Config.Director.MaxAlive then
+			state.spawnAcc = 0
+			local elite = elapsed >= state.nextElite
+			if elite then
+				state.nextElite = elapsed + Config.Director.EliteEvery
+			end
+			EnemyService.spawn(pickKind(intensity, elite), intensity)
+		end
+
+		if state.combo > 0 and os.clock() > state.comboExpire then
+			state.combo = 0
+		end
+		pushHud(player)
+
+		if state.timeLeft <= 0 then
+			endRun(player, true)
 			break
 		end
 	end
-end
-
-local function buyMeta(player: Player, id: any)
-	if typeof(id) ~= "string" then
-		return
-	end
-	local state = ensureRun(player)
-	if state.active then
-		return
-	end
-
-	local def = nil
-	for _, item in Config.MetaUpgrades do
-		if item.id == id then
-			def = item
-			break
-		end
-	end
-	if not def then
-		return
-	end
-
-	local level = metaLevel(player, id)
-	if level >= def.maxLevel then
-		return
-	end
-	local cost = math.floor(def.baseCost * (def.costGrowth ^ level))
-	if not DataService.spendCredits(player, cost) then
-		return
-	end
-	DataService.setMetaLevel(player, id, level + 1)
-	DataService.save(player)
-	pushLobby(player)
 end
 
 function GameService.start()
-	print("[NeonSurge] Building arena...")
+	print("[NeonSurge] Building district...")
 	ArenaBuilder.build()
-	print("[NeonSurge] Arena ready")
+	print("[NeonSurge] District online")
 
 	Remotes.init()
 	DataService.init()
 	MonetizationService.init()
-	CombatService.init()
+	CombatService.init({
+		onStyle = function(player, amount, label)
+			addStyle(player, amount, label)
+			pushHud(player)
+		end,
+	})
 	PickupService.init({
 		onCollect = function(player, amount)
 			local state = ensureRun(player)
@@ -468,6 +450,7 @@ function GameService.start()
 			else
 				grantXp(player, amount)
 			end
+			addStyle(player, 4, "GEM")
 			pushHud(player)
 		end,
 	})
@@ -475,6 +458,38 @@ function GameService.start()
 		onEnemyDied = onEnemyDied,
 		onPlayerDamaged = damagePlayer,
 	})
+
+	-- Jump pads
+	task.spawn(function()
+		local arena = Workspace:WaitForChild("NeonArena", 10)
+		if not arena then
+			return
+		end
+		local padClock: { [Player]: number } = {}
+		for _, inst in arena:GetDescendants() do
+			if inst:IsA("BasePart") and inst:GetAttribute("JumpPad") == true then
+				inst.Touched:Connect(function(hit)
+					local character = hit:FindFirstAncestorOfClass("Model")
+					local player = character and Players:GetPlayerFromCharacter(character)
+					local root = character and character:FindFirstChild("HumanoidRootPart")
+					if not player or not root or not root:IsA("BasePart") then
+						return
+					end
+					if player:GetAttribute("RunActive") ~= true then
+						return
+					end
+					local now = os.clock()
+					if now - (padClock[player] or 0) < 0.6 then
+						return
+					end
+					padClock[player] = now
+					local boost = tonumber(inst:GetAttribute("Boost")) or 90
+					root.AssemblyLinearVelocity = Vector3.new(root.AssemblyLinearVelocity.X, boost, root.AssemblyLinearVelocity.Z)
+					addStyle(player, 6, "PAD")
+				end)
+			end
+		end
+	end)
 
 	Remotes.get("RequestStartRun").OnServerEvent:Connect(function(player)
 		local state = ensureRun(player)
@@ -486,13 +501,13 @@ function GameService.start()
 
 	Remotes.get("RequestRestart").OnServerEvent:Connect(function(player)
 		local state = ensureRun(player)
-		if state.phase == "GameOver" or not state.active then
-			state.active = false
-			state.phase = "Lobby"
-			player:SetAttribute("RunActive", false)
-			pushLobby(player)
-			pushHud(player, Config.Tagline)
-		end
+		state.active = false
+		state.phase = "Lobby"
+		player:SetAttribute("RunActive", false)
+		EnemyService.clear()
+		PickupService.clear()
+		pushLobby(player)
+		pushHud(player, Config.Tagline)
 	end)
 
 	Remotes.get("ChooseUpgrade").OnServerEvent:Connect(function(player, upgradeId)
@@ -512,11 +527,15 @@ function GameService.start()
 		if not valid then
 			return
 		end
-
-		local heal
-		state.stats, heal = Upgrades.apply(state.stats, upgradeId)
+		local heal, unlocked
+		state.stats, heal, unlocked = Upgrades.apply(state.stats, upgradeId)
 		if Upgrades.isVamp(upgradeId) then
 			state.leech = true
+		end
+		if upgradeId == "shatter" then
+			state.ownedUnlocks.shatter = true
+		elseif upgradeId == "rail" then
+			state.ownedUnlocks.rail = true
 		end
 		state.maxHealth = computeMaxHealth(player, state)
 		if heal then
@@ -525,21 +544,50 @@ function GameService.start()
 			state.health = math.min(state.health, state.maxHealth)
 		end
 		state.pendingUpgrades = nil
-		state.phase = "Wave"
-		applyCombatProfile(player, state)
-
-		-- chained level-ups
+		state.phase = "Mission"
+		applyProfile(player, state)
+		if unlocked then
+			pushHud(player, "WEAPON ONLINE")
+		else
+			pushHud(player)
+		end
 		local need = xpNeed(state.level)
 		if state.xp >= need then
 			state.xp -= need
 			state.level += 1
 			offerLevelUp(player)
-		else
-			pushHud(player)
 		end
 	end)
 
-	Remotes.get("RequestBuyMeta").OnServerEvent:Connect(buyMeta)
+	Remotes.get("RequestBuyMeta").OnServerEvent:Connect(function(player, id)
+		if typeof(id) ~= "string" then
+			return
+		end
+		local state = ensureRun(player)
+		if state.active then
+			return
+		end
+		local def = nil
+		for _, item in Config.MetaUpgrades do
+			if item.id == id then
+				def = item
+				break
+			end
+		end
+		if not def then
+			return
+		end
+		local level = metaLevel(player, id)
+		if level >= def.maxLevel then
+			return
+		end
+		local cost = math.floor(def.baseCost * (def.costGrowth ^ level))
+		if DataService.spendCredits(player, cost) then
+			DataService.setMetaLevel(player, id, level + 1)
+			DataService.save(player)
+			pushLobby(player)
+		end
+	end)
 
 	Remotes.get("RequestBuyProduct").OnServerEvent:Connect(function(player, key)
 		if typeof(key) ~= "string" then
@@ -559,24 +607,24 @@ function GameService.start()
 		ensureRun(player)
 		player:SetAttribute("RunActive", false)
 		player.CharacterAdded:Connect(function()
-			task.wait(0.25)
+			task.wait(0.2)
 			local state = ensureRun(player)
+			teleportSpawn(player)
 			if state.active then
-				applyCombatProfile(player, state)
-				teleportToArena(player)
+				applyProfile(player, state)
 			else
-				teleportToArena(player)
 				local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 				if humanoid then
-					humanoid.WalkSpeed = Config.Player.BaseWalkSpeed
+					humanoid.WalkSpeed = Config.Movement.WalkSpeed
+					humanoid.JumpPower = Config.Movement.JumpPower
 				end
 			end
 			pushLobby(player)
-			pushHud(player, if state.active then nil else "PRESS PLAY")
+			pushHud(player, if state.active then nil else "START MISSION")
 		end)
 		task.defer(function()
 			pushLobby(player)
-			pushHud(player, "PRESS PLAY")
+			pushHud(player, "START MISSION")
 		end)
 	end
 
@@ -586,22 +634,6 @@ function GameService.start()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		runs[player] = nil
-	end)
-
-	-- light HUD refresh / combo decay
-	task.spawn(function()
-		while true do
-			task.wait(0.35)
-			local now = os.clock()
-			for player, state in runs do
-				if state.active and state.phase ~= "GameOver" then
-					if state.combo > 0 and now > state.comboExpire then
-						state.combo = 0
-					end
-					pushHud(player)
-				end
-			end
-		end
 	end)
 end
 

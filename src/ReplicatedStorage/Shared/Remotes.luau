@@ -8,6 +8,8 @@ local Remotes = {}
 local NAMES = {
 	"RequestFire",
 	"RequestDash",
+	"RequestSlam",
+	"RequestWeapon",
 	"RequestStartRun",
 	"RequestRestart",
 	"RequestBuyMeta",
@@ -17,6 +19,7 @@ local NAMES = {
 	"LobbyUpdate",
 	"UpgradeChoices",
 	"FxBurst",
+	"StylePop",
 }
 
 local function folder(): Folder

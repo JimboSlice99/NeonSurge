@@ -1,52 +1,52 @@
 --!strict
--- Neon Surge — tuning + economy. Paste product IDs after publishing.
+-- Neon Surge — cyber district mission runner.
 
 local Config = {
 	GameName = "NEON SURGE",
-	Tagline = "Hold the line.",
+	Tagline = "Style is survival.",
 
 	Arena = {
-		Radius = 52,
+		Radius = 60,
 		FloorY = 0,
-		WallHeight = 14,
-		RingSegments = 40,
-		SpawnClearance = 11,
+		Levels = 3,
+		LevelHeight = 16,
 	},
 
-	Player = {
-		BaseMaxHealth = 100,
-		BaseWalkSpeed = 26,
-		BaseFireRate = 5.2,
-		BaseDamage = 18,
-		BaseProjectileSpeed = 145,
-		ProjectileLifetime = 1.25,
-		ProjectileRadius = 0.42,
-		MaxRange = 80,
-		DashSpeed = 105,
-		DashDuration = 0.14,
-		DashCooldown = 1.05,
-		DashIFrames = 0.28,
+	Movement = {
+		WalkSpeed = 28,
+		SprintMul = 1.25,
+		JumpPower = 55,
+		DoubleJumpPower = 52,
+		DashSpeed = 110,
+		DashDuration = 0.13,
+		DashCooldown = 0.95,
+		DashIFrames = 0.22,
+		SlamSpeed = 140,
+		SlamRadius = 14,
+		SlamDamage = 55,
+		SlamCooldown = 1.8,
+	},
+
+	Combat = {
+		MaxRange = 95,
+		MagnetRadius = 18,
 		PickupRadius = 5,
-		MagnetRadius = 16,
-		XpToLevelBase = 36,
-		XpToLevelGrowth = 1.2,
+		XpBase = 34,
+		XpGrowth = 1.18,
 	},
 
-	Waves = {
+	Director = {
 		Countdown = 2,
-		Intermission = 1.6,
-		BaseEnemyCount = 7,
-		EnemiesPerWave = 3,
-		MaxAlive = 50,
-		SpawnInterval = 0.38,
-		BossEvery = 5,
+		MissionSeconds = 180,
+		IntensityRamp = 0.012,
+		MaxAlive = 55,
+		EliteEvery = 45,
 	},
 
 	Economy = {
-		CreditKeepRatio = 0.4,
-		BossCredit = 30,
-		WaveClearBonus = 10,
-		HighScoreBonus = 60,
+		CreditKeepRatio = 0.45,
+		StyleCreditBonus = 0.002,
+		HighScoreBonus = 80,
 	},
 
 	Monetization = {
@@ -59,48 +59,81 @@ local Config = {
 			CreditPackSmall = 0,
 			CreditPackLarge = 0,
 		},
-		PackCredits = {
-			Small = 500,
-			Large = 2500,
-		},
+		PackCredits = { Small = 500, Large = 2500 },
 	},
 
 	MetaUpgrades = {
 		{ id = "maxHp", name = "Core Plating", desc = "+15 max HP", maxLevel = 8, baseCost = 40, costGrowth = 1.55 },
-		{ id = "damage", name = "Plasma Rail", desc = "+12% damage", maxLevel = 8, baseCost = 50, costGrowth = 1.6 },
-		{ id = "fireRate", name = "Cycle Boost", desc = "+8% fire rate", maxLevel = 6, baseCost = 55, costGrowth = 1.65 },
-		{ id = "dash", name = "Phase Boots", desc = "-8% dash CD", maxLevel = 5, baseCost = 45, costGrowth = 1.7 },
+		{ id = "damage", name = "Rail Tuning", desc = "+12% damage", maxLevel = 8, baseCost = 50, costGrowth = 1.6 },
+		{ id = "mobility", name = "Servo Legs", desc = "+6% move / dash", maxLevel = 6, baseCost = 45, costGrowth = 1.6 },
 		{ id = "magnet", name = "Attractor", desc = "+20% gem pull", maxLevel = 5, baseCost = 35, costGrowth = 1.5 },
+		{ id = "style", name = "Showboat Chip", desc = "+10% style score", maxLevel = 5, baseCost = 55, costGrowth = 1.65 },
 	},
 
-	-- Subtle built-in Roblox sounds (library IDs)
+	Weapons = {
+		Pulse = {
+			id = "Pulse",
+			name = "Pulse SMG",
+			fireRate = 7.5,
+			damage = 12,
+			speed = 160,
+			spread = 4,
+			count = 1,
+			pierce = 0,
+			color = Color3.fromRGB(70, 210, 220),
+		},
+		Shatter = {
+			id = "Shatter",
+			name = "Shatter Cannon",
+			fireRate = 1.35,
+			damage = 16,
+			speed = 120,
+			spread = 18,
+			count = 6,
+			pierce = 0,
+			color = Color3.fromRGB(220, 120, 80),
+		},
+		Rail = {
+			id = "Rail",
+			name = "Phase Rail",
+			fireRate = 1.8,
+			damage = 48,
+			speed = 240,
+			spread = 0,
+			count = 1,
+			pierce = 4,
+			color = Color3.fromRGB(160, 110, 255),
+		},
+	},
+
 	Sounds = {
 		Shoot = "rbxassetid://9114224722",
 		Hit = "rbxassetid://9119693934",
 		Dash = "rbxassetid://9120386437",
+		Slam = "rbxassetid://9114223563",
 		LevelUp = "rbxassetid://9113815993",
 		Pickup = "rbxassetid://9114221272",
 		Hurt = "rbxassetid://9114223563",
-		Wave = "rbxassetid://9113816342",
+		Style = "rbxassetid://9113816342",
 	},
 
 	Palette = {
-		Cyan = Color3.fromRGB(70, 220, 230),
-		Magenta = Color3.fromRGB(220, 70, 150),
-		Violet = Color3.fromRGB(130, 95, 220),
-		Lime = Color3.fromRGB(120, 220, 140),
-		Gold = Color3.fromRGB(230, 190, 90),
-		Floor = Color3.fromRGB(12, 14, 22),
-		Panel = Color3.fromRGB(10, 12, 20),
-		Wall = Color3.fromRGB(22, 26, 40),
-		Accent = Color3.fromRGB(40, 160, 170),
+		Cyan = Color3.fromRGB(72, 210, 220),
+		Magenta = Color3.fromRGB(210, 70, 140),
+		Violet = Color3.fromRGB(140, 105, 230),
+		Orange = Color3.fromRGB(230, 130, 70),
+		Lime = Color3.fromRGB(120, 210, 140),
+		Gold = Color3.fromRGB(230, 195, 95),
+		Floor = Color3.fromRGB(10, 12, 18),
+		Panel = Color3.fromRGB(9, 11, 18),
+		Wall = Color3.fromRGB(18, 22, 34),
 		Danger = Color3.fromRGB(220, 70, 90),
-		Text = Color3.fromRGB(230, 236, 245),
-		Muted = Color3.fromRGB(140, 150, 170),
+		Text = Color3.fromRGB(232, 238, 246),
+		Muted = Color3.fromRGB(130, 140, 160),
 	},
 
 	RemotesFolderName = "NeonSurgeRemotes",
-	DataStoreName = "NeonSurge_Player_v2",
+	DataStoreName = "NeonSurge_Player_v3",
 }
 
 return Config

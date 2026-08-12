@@ -1,8 +1,12 @@
 --!strict
 
-export type EnemyKind = "Runner" | "Shooter" | "Bruiser" | "Boss"
+export type EnemyKind = "Wisp" | "Skitter" | "Gunner" | "Bruiser" | "Elite"
 
-export type GamePhase = "Lobby" | "Countdown" | "Wave" | "LevelUp" | "Intermission" | "GameOver"
+export type GamePhase = "Lobby" | "Countdown" | "Mission" | "LevelUp" | "Results"
+
+export type WeaponId = "Pulse" | "Shatter" | "Rail"
+
+export type StyleRank = "D" | "C" | "B" | "A" | "S" | "SS"
 
 export type RunStats = {
 	damageMul: number,
@@ -10,15 +14,25 @@ export type RunStats = {
 	moveMul: number,
 	dashCooldownMul: number,
 	pickupMul: number,
-	projectileCount: number,
-	pierce: number,
+	styleMul: number,
 	maxHealthBonus: number,
+	weapons: { WeaponId },
+	activeWeapon: WeaponId,
+}
+
+export type UpgradeOption = {
+	id: string,
+	name: string,
+	desc: string,
+	rarity: "Common" | "Rare" | "Epic",
 }
 
 export type HudSnapshot = {
 	phase: GamePhase,
-	wave: number,
+	timeLeft: number,
 	score: number,
+	style: number,
+	styleRank: StyleRank,
 	level: number,
 	xp: number,
 	xpNeed: number,
@@ -28,17 +42,11 @@ export type HudSnapshot = {
 	health: number,
 	maxHealth: number,
 	enemiesAlive: number,
+	weapon: string,
 	combo: number,
-	countdown: number?,
 	message: string?,
+	countdown: number?,
 	highScore: number,
-}
-
-export type UpgradeOption = {
-	id: string,
-	name: string,
-	desc: string,
-	rarity: "Common" | "Rare" | "Epic",
 }
 
 export type MetaUpgradeView = {
@@ -55,6 +63,7 @@ export type LobbySnapshot = {
 	credits: number,
 	highScore: number,
 	bestWave: number,
+	bestRank: string,
 	ownsDoubleCredits: boolean,
 	ownsVipTrail: boolean,
 	ownsExtraDash: boolean,

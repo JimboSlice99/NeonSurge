@@ -1,60 +1,37 @@
 # NEON SURGE
 
-A **dark cyberpunk roguelite arena shooter** for Roblox — **Rojo + Luau only**.
+Dark cyberpunk **district mission runner** for Roblox — Rojo + Luau only.
 
-Moody arena, gem XP, level-up protocols, banked credits, and meta loadouts. Tuned for atmosphere first (low lighting, sparse neon accents) — not a light show.
+## The loop
 
-## Why this loop can monetize
-
-| Hook | What it does |
-|------|----------------|
-| **Short runs** | Instant Play → waves → death in minutes |
-| **In-run upgrades** | Level-up picks (damage, multi-shot, pierce…) |
-| **Meta progression** | Spend banked credits on permanent upgrades |
-| **Gamepasses** | 2x Credits, VIP Trail, Extra Dash (IDs in Config) |
-| **Dev products** | Credit packs for impulse spends |
-| **High score** | Retention + bonus credits on PB |
-
-No pay-to-win wall: gamepasses accelerate / cosmetics; skill still clears waves.
+- **3:00 missions** in a multi-level neon district
+- **Movement tech:** dash, double-jump, ground slam, jump pads
+- **Weapons:** Pulse SMG → unlock Shatter Cannon & Phase Rail mid-run
+- **Style ranks:** D → SS (kills, dashes, slams, pads)
+- **XP gems** → protocol picks → bank credits → permanent loadout
 
 ## Controls
 
-- **WASD** move · **auto-fire** · **Q / Shift** dash  
-- **Level up** → pick 1 of 3 upgrades  
-- **R** returns to lobby after a run  
-- Lobby **PLAY RUN** / upgrade shop / gamepass buttons
+| Input | Action |
+|-------|--------|
+| WASD | Move |
+| Space ×2 | Double jump |
+| Q / Shift | Dash |
+| F | Ground slam |
+| 1 / 2 / 3 | Switch weapons |
+| R | Return to lobby |
 
-## Setup (Studio)
+## Run locally
 
-```bash
+```powershell
 aftman install
 rojo build -o NeonSurge.rbxlx
 ```
 
-Open `NeonSurge.rbxlx` in Roblox Studio → Play.
+Open in Studio → Play → **START MISSION**.
 
-Or live sync: `rojo serve` + Rojo plugin **7.7.0**.
+Rojo plugin must be **7.7.0** if using `rojo serve`.
 
-## Publish checklist (money)
+## Monetization
 
-1. Upload the place to a Roblox experience you own  
-2. Create gamepasses + developer products in Creator Dashboard  
-3. Paste IDs into `src/ReplicatedStorage/Shared/Config.luau` → `Monetization`  
-4. Enable **Studio Access to API Services** for DataStore tests  
-5. Soft launch, watch session time / pass conversion, patch weekly
-
-## Layout
-
-```
-src/ReplicatedStorage/Shared/   Config, upgrades, remotes, types
-src/ServerScriptService/        Arena, combat, waves, data, monetization
-src/StarterPlayer/...           Lobby, HUD, upgrade picker, input, FX
-```
-
-## Tooling
-
-```bash
-aftman install
-selene src
-rojo build -o NeonSurge.rbxlx
-```
+Paste Creator Dashboard IDs in `src/ReplicatedStorage/Shared/Config.luau` → `Monetization`.

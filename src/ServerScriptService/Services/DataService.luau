@@ -9,7 +9,7 @@ export type PlayerData = {
 	credits: number,
 	highScore: number,
 	bestWave: number,
-	meta: { [string]: number },
+	meta: { [string]: any },
 }
 
 local DataService = {}
