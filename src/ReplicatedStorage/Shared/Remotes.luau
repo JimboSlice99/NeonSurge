@@ -1,49 +1,65 @@
 --!strict
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local Config = require(script.Parent.Config)
 
 local Remotes = {}
 
-local function ensureFolder(): Folder
+export type RemoteBag = {
+	SelectSeed: RemoteEvent,
+	BuyShopItem: RemoteEvent,
+	PromptGamePass: RemoteEvent,
+	PromptProduct: RemoteEvent,
+	RequestHud: RemoteEvent,
+	HudUpdate: RemoteEvent,
+	Notify: RemoteEvent,
+}
+
+local NAMES = {
+	"SelectSeed",
+	"BuyShopItem",
+	"PromptGamePass",
+	"PromptProduct",
+	"RequestHud",
+	"HudUpdate",
+	"Notify",
+}
+
+local cached: RemoteBag? = nil
+
+local function folder(): Folder
 	local existing = ReplicatedStorage:FindFirstChild(Config.RemotesFolderName)
 	if existing and existing:IsA("Folder") then
 		return existing
 	end
-
-	local folder = Instance.new("Folder")
-	folder.Name = Config.RemotesFolderName
-	folder.Parent = ReplicatedStorage
-	return folder
+	local created = Instance.new("Folder")
+	created.Name = Config.RemotesFolderName
+	created.Parent = ReplicatedStorage
+	return created
 end
 
-local function ensureRemoteEvent(name: string): RemoteEvent
-	local folder = ensureFolder()
-	local existing = folder:FindFirstChild(name)
+local function ensure(name: string): RemoteEvent
+	local parent = folder()
+	local existing = parent:FindFirstChild(name)
 	if existing and existing:IsA("RemoteEvent") then
 		return existing
 	end
-
 	local remote = Instance.new("RemoteEvent")
 	remote.Name = name
-	remote.Parent = folder
+	remote.Parent = parent
 	return remote
 end
 
-function Remotes.init()
-	ensureRemoteEvent("RequestFire")
-	ensureRemoteEvent("RequestDash")
-	ensureRemoteEvent("HudUpdate")
-	ensureRemoteEvent("FxBurst")
-	ensureRemoteEvent("RequestRestart")
-end
-
-function Remotes.get(name: string): RemoteEvent
-	local folder = ensureFolder()
-	local remote = folder:WaitForChild(name, 10)
-	assert(remote and remote:IsA("RemoteEvent"), ("Missing RemoteEvent %s"):format(name))
-	return remote
+function Remotes.Get(): RemoteBag
+	if cached then
+		return cached
+	end
+	local bag = {}
+	for _, name in NAMES do
+		bag[name] = ensure(name)
+	end
+	cached = bag :: RemoteBag
+	return cached
 end
 
 return Remotes

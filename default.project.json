@@ -1,5 +1,5 @@
 {
-  "name": "NeonSurge",
+  "name": "SurgeGarden",
   "tree": {
     "$className": "DataModel",
 
@@ -16,58 +16,50 @@
         "$path": "src/StarterPlayer/StarterPlayerScripts"
       },
       "$properties": {
-        "CameraMaxZoomDistance": 28,
-        "CameraMinZoomDistance": 12,
-        "CharacterWalkSpeed": 22,
+        "CameraMaxZoomDistance": 40,
+        "CameraMinZoomDistance": 10,
+        "CharacterWalkSpeed": 18,
         "CharacterJumpPower": 50
       }
     },
 
     "Lighting": {
       "$properties": {
-        "Ambient": [0.05, 0.08, 0.18],
-        "Brightness": 1.4,
-        "ClockTime": 0,
-        "FogColor": [0.02, 0.04, 0.12],
-        "FogEnd": 220,
-        "FogStart": 40,
+        "Ambient": [0.55, 0.58, 0.5],
+        "Brightness": 2,
+        "ClockTime": 14,
+        "FogColor": [0.7, 0.78, 0.85],
+        "FogEnd": 420,
+        "FogStart": 180,
         "GlobalShadows": true,
-        "OutdoorAmbient": [0.08, 0.1, 0.22],
+        "OutdoorAmbient": [0.58, 0.62, 0.55],
         "Technology": "ShadowMap"
       },
       "Atmosphere": {
         "$className": "Atmosphere",
         "$properties": {
-          "Color": [0.12, 0.18, 0.4],
-          "Decay": [0.35, 0.2, 0.55],
-          "Density": 0.35,
-          "Glare": 0.2,
-          "Haze": 1.4,
-          "Offset": 0.1
+          "Color": [0.75, 0.82, 0.7],
+          "Decay": [0.55, 0.55, 0.45],
+          "Density": 0.22,
+          "Glare": 0.1,
+          "Haze": 0.8,
+          "Offset": 0.05
         }
       },
       "ColorCorrection": {
         "$className": "ColorCorrectionEffect",
         "$properties": {
           "Brightness": 0.02,
-          "Contrast": 0.15,
-          "Saturation": 0.25,
-          "TintColor": [0.9, 0.95, 1.1]
-        }
-      },
-      "Bloom": {
-        "$className": "BloomEffect",
-        "$properties": {
-          "Intensity": 0.85,
-          "Size": 28,
-          "Threshold": 0.9
+          "Contrast": 0.08,
+          "Saturation": 0.12,
+          "TintColor": [1.02, 1.0, 0.96]
         }
       }
     },
 
     "SoundService": {
       "$properties": {
-        "AmbientReverb": "City",
+        "AmbientReverb": "Forest",
         "DopplerScale": 1,
         "RespectFilteringEnabled": true
       }
@@ -81,10 +73,10 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Color": [0.03, 0.04, 0.08],
+          "Color": [0.35, 0.62, 0.86],
           "Material": "SmoothPlastic",
-          "Position": [0, -0.5, 0],
-          "Size": [200, 1, 200],
+          "Position": [0, -6, 0],
+          "Size": [512, 1, 512],
           "TopSurface": "Smooth",
           "BottomSurface": "Smooth"
         }
