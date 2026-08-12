@@ -1,74 +1,80 @@
 # SURGE GARDEN
 
-A full-size Roblox **grow / idle farm simulator** built to feel publish-ready and chart-competitive.
+Full-size Roblox **grow / idle farm simulator** — polished and upload-ready.
 
-**Loop:** plant → grow → harvest → upgrade → unlock zones → rebirth.
+**Loop:** plant → grow → harvest → shop upgrades → unlock zones → daily reward → rebirth.
 
-Built with **Luau + Rojo**. Server-authoritative economy + Robux shop.
-
-## What you get
-
-- Personal farm island (plaza, fountain, market, roads, river, trees, lanterns)
-- **4 zones** · up to **56 plots** (Homestead → Riverbend → Crystal Orchard → Sky Terrace)
-- **8 crops** from Wheat to Legendary Crystal Bloom
-- Tools through Diamond Scythe
-- Guided goals + rebirth prestige (+35% coins each)
-- Mobile-friendly HUD / tabbed shop
-- DataStore saves + MarketplaceService monetization (placeholder IDs)
-
-## Play loop (60 seconds)
-
-1. Spawn in the market plaza → walk through the arch.
-2. Use a plot prompt to **Plant** (seed bar at bottom).
-3. Watch crops grow → **Harvest** for coins (floating +coins).
-4. Open **SHOP** → buy seeds, tools, next zone.
-5. When rich enough, **Rebirth** for permanent coin multiplier.
-
-## Setup
+## Quick start (Windows)
 
 ```powershell
-git checkout cursor/grow-garden-simulator-3712
-git pull
+git pull origin cursor/grow-garden-simulator-3712
 aftman install
 rojo build -o SurgeGarden.rbxlx
 ```
 
-Fully close Studio → open `SurgeGarden.rbxlx` → Play.
+1. Fully close Roblox Studio  
+2. Open `SurgeGarden.rbxlx`  
+3. **Game Settings → Security → Enable Studio Access to API Services**  
+4. Press **Play**
 
-Enable **Game Settings → Security → API Services** for DataStores.
+### First-session checklist
+- [ ] Tutorial card appears  
+- [ ] Walk through arch → plant a plot  
+- [ ] Harvest (floating coins + particles + sound)  
+- [ ] **Plant All** / **Harvest All** work  
+- [ ] Shop buys seeds / tools  
+- [ ] Daily button grants coins  
+- [ ] leaderstats show Coins + Rebirths  
 
-## Monetization IDs
+In **Studio**, Robux buttons mock-grant rewards so you can test without IDs.
 
-Edit `src/ReplicatedStorage/Shared/Config.luau`:
+## Publish (go live)
 
-```lua
-GamePassIds = {
-  VIP = 0,           -- +50% harvest coins
-  DoubleSpeed = 0,   -- 2x grow speed
-  AutoCollect = 0,   -- auto-harvest
-},
-DevProductIds = {
-  CoinsSmall = 0,    -- +5,000 coins
-  CoinsBig = 0,      -- +35,000 coins
-  RareSeedPack = 0,  -- rare seed crate
-  ZoneSkip = 0,      -- unlock next zone
-},
+### 1. Publish the place
+File → Publish to Roblox (create experience if needed).
+
+### 2. Create monetization
+Creator Dashboard → your experience → **Monetization**:
+
+| Type | Name | Suggested effect |
+|------|------|------------------|
+| Game Pass | VIP | +50% harvest coins |
+| Game Pass | 2x Grow Speed | crops grow 2× |
+| Game Pass | Auto Collect | auto Harvest All |
+| Dev Product | Small Coin Pack | +5,000 coins |
+| Dev Product | Big Coin Pack | +35,000 coins |
+| Dev Product | Rare Seed Crate | rare seeds |
+| Dev Product | Zone Skip | unlock next zone |
+
+### 3. Paste IDs
+Edit `src/ReplicatedStorage/Shared/Config.luau` → `Monetization.GamePassIds` / `DevProductIds`  
+Set `StudioMockPasses = false` for production.
+
+```powershell
+rojo build -o SurgeGarden.rbxlx
 ```
 
-Create passes/products in Creator Dashboard → paste IDs → rebuild → publish.
+Re-open in Studio → Publish again.
+
+### 4. Store page
+- Icon: lush farm + coins + title  
+- Thumbnails: plaza arch, growing fields, shop UI  
+- Description: Plant crops, unlock farms, rebirth for power.  
+- Genre: Simulation  
+
+### 5. Live test
+Join the published game (not just Studio) and buy one cheap Dev Product to confirm `ProcessReceipt`.
+
+## Features
+- Personal farm island (plaza, market, river, 4 zones, up to 56 plots)
+- 8 crops · 4 tools · zone unlocks · rebirth prestige
+- Plant All / Harvest All · daily reward · tutorial · leaderstats
+- Sounds, harvest particles, floating +coins
+- DataStores · rate-limited remotes · server-authoritative Robux
 
 ## Project layout
-
 ```
-src/ReplicatedStorage/Shared/     Config, remotes, types
-src/ServerScriptService/          Map, data, garden, monetization
-src/StarterPlayer/.../Client/     HUD, shop, harvest FX
+src/ReplicatedStorage/Shared/   Config (IDs here), remotes, types
+src/ServerScriptService/        map, data, garden, monetization
+src/StarterPlayer/.../Client/   HUD, shop, FX, audio, tutorial
 ```
-
-## Publish tips (charts)
-
-1. Strong icon: lush farm + big gold coins + clear title.
-2. Thumbnail: plaza arch + growing fields.
-3. Description: Plant → Harvest → Unlock farms → Rebirth.
-4. Soft launch with VIP / 2x / Auto Collect priced for your audience.
-5. Keep first harvest under ~10 seconds (already tuned).

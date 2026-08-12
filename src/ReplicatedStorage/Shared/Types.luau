@@ -14,6 +14,8 @@ export type PlayerData = {
 	plots: { [string]: PlotSave },
 	ownedPasses: { [string]: boolean },
 	rebirths: number,
+	lastDailyDay: number,
+	tutorialDone: boolean,
 	stats: {
 		planted: number,
 		harvested: number,
@@ -43,6 +45,9 @@ export type HudPayload = {
 	rebirthCost: number,
 	coinMult: number,
 	goalText: string,
+	dailyReady: boolean,
+	dailyAmount: number,
+	tutorialDone: boolean,
 	stats: {
 		planted: number,
 		harvested: number,
@@ -55,6 +60,7 @@ export type HarvestFxPayload = {
 	amount: number,
 	position: Vector3,
 	color: Color3,
+	sound: string?,
 }
 
 return {}

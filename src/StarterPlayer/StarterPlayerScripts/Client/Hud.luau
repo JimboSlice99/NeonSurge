@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Config"))
 local Types = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Types"))
+local Audio = require(script.Parent:WaitForChild("Audio"))
 
 local Hud = {}
 
@@ -20,8 +21,14 @@ local goalLabel: TextLabel
 local seedRow: ScrollingFrame
 local toastLabel: TextLabel
 local rebirthBtn: TextButton
-local onOpenShop: (() -> ())?
-local onRebirth: (() -> ())?
+local dailyBtn: TextButton
+local handlers: {
+	openShop: () -> (),
+	rebirth: () -> (),
+	plantAll: () -> (),
+	harvestAll: () -> (),
+	claimDaily: () -> (),
+}
 local displayedCoins = 0
 
 local function corner(parent: Instance, radius: number?)
@@ -72,9 +79,34 @@ local function tweenCoins(target: number)
 	end)
 end
 
-function Hud.Init(handlers: { openShop: () -> (), rebirth: () -> () })
-	onOpenShop = handlers.openShop
-	onRebirth = handlers.rebirth
+local function makeAction(parent: Instance, text: string, color: Color3, order: number, fn: () -> ())
+	local btn = Instance.new("TextButton")
+	btn.LayoutOrder = order
+	btn.Size = UDim2.new(0, 108, 0, 40)
+	btn.BackgroundColor3 = color
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 14
+	btn.TextColor3 = Config.Palette.TextLight
+	btn.Text = text
+	btn.AutoButtonColor = true
+	btn.Parent = parent
+	corner(btn, 10)
+	btn.MouseButton1Click:Connect(function()
+		Audio.Play("Click", 0.35)
+		fn()
+	end)
+	return btn
+end
+
+function Hud.Init(h: {
+	openShop: () -> (),
+	rebirth: () -> (),
+	plantAll: () -> (),
+	harvestAll: () -> (),
+	claimDaily: () -> (),
+})
+	handlers = h
+	Audio.Init()
 
 	gui = Instance.new("ScreenGui")
 	gui.Name = "SurgeGardenHud"
@@ -83,7 +115,6 @@ function Hud.Init(handlers: { openShop: () -> (), rebirth: () -> () })
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	gui.Parent = playerGui
 
-	-- Top brand + stats
 	local top = Instance.new("Frame")
 	top.Name = "TopBar"
 	top.AnchorPoint = Vector2.new(0.5, 0)
@@ -153,18 +184,16 @@ function Hud.Init(handlers: { openShop: () -> (), rebirth: () -> () })
 	corner(shopButton, 12)
 	stroke(shopButton, Color3.fromRGB(40, 90, 50), 1.5)
 	shopButton.MouseButton1Click:Connect(function()
-		if onOpenShop then
-			onOpenShop()
-		end
+		Audio.Play("Click", 0.4)
+		handlers.openShop()
 	end)
 
-	-- Goal strip
 	local goal = Instance.new("Frame")
 	goal.AnchorPoint = Vector2.new(0.5, 0)
 	goal.Position = UDim2.new(0.5, 0, 0, 82)
 	goal.Size = UDim2.new(0.9, 0, 0, 34)
 	goal.BackgroundColor3 = Config.Palette.ButtonDark
-	goal.BackgroundTransparency = 0.15
+	goal.BackgroundTransparency = 0.12
 	goal.BorderSizePixel = 0
 	goal.Parent = gui
 	corner(goal, 10)
@@ -186,7 +215,7 @@ function Hud.Init(handlers: { openShop: () -> (), rebirth: () -> () })
 	toolLabel.BackgroundTransparency = 1
 	toolLabel.AnchorPoint = Vector2.new(0, 0)
 	toolLabel.Position = UDim2.new(0.03, 0, 0, 124)
-	toolLabel.Size = UDim2.new(0.45, 0, 0, 22)
+	toolLabel.Size = UDim2.new(0.4, 0, 0, 22)
 	toolLabel.Font = Enum.Font.Gotham
 	toolLabel.TextSize = 14
 	toolLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -195,24 +224,58 @@ function Hud.Init(handlers: { openShop: () -> (), rebirth: () -> () })
 	toolLabel.Text = "Tool: Worn Gloves"
 	toolLabel.Parent = gui
 
+	local actions = Instance.new("Frame")
+	actions.AnchorPoint = Vector2.new(1, 0)
+	actions.Position = UDim2.new(0.97, 0, 0, 120)
+	actions.Size = UDim2.new(0, 340, 0, 44)
+	actions.BackgroundTransparency = 1
+	actions.Parent = gui
+	local actionLayout = Instance.new("UIListLayout")
+	actionLayout.FillDirection = Enum.FillDirection.Horizontal
+	actionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	actionLayout.Padding = UDim.new(0, 6)
+	actionLayout.Parent = actions
+
+	makeAction(actions, "Plant All", Config.Palette.Button, 1, function()
+		handlers.plantAll()
+	end)
+	makeAction(actions, "Harvest All", Config.Palette.ButtonDark, 2, function()
+		handlers.harvestAll()
+	end)
+
+	dailyBtn = Instance.new("TextButton")
+	dailyBtn.AnchorPoint = Vector2.new(0, 0)
+	dailyBtn.Position = UDim2.new(0.03, 0, 0, 150)
+	dailyBtn.Size = UDim2.new(0, 140, 0, 36)
+	dailyBtn.BackgroundColor3 = Config.Palette.Gold
+	dailyBtn.Font = Enum.Font.GothamBold
+	dailyBtn.TextSize = 14
+	dailyBtn.TextColor3 = Config.Palette.Text
+	dailyBtn.Text = "Daily +"
+	dailyBtn.Visible = false
+	dailyBtn.Parent = gui
+	corner(dailyBtn, 10)
+	dailyBtn.MouseButton1Click:Connect(function()
+		Audio.Play("Coin", 0.5)
+		handlers.claimDaily()
+	end)
+
 	rebirthBtn = Instance.new("TextButton")
-	rebirthBtn.AnchorPoint = Vector2.new(1, 0)
-	rebirthBtn.Position = UDim2.new(0.97, 0, 0, 120)
-	rebirthBtn.Size = UDim2.new(0, 130, 0, 36)
+	rebirthBtn.AnchorPoint = Vector2.new(0, 0)
+	rebirthBtn.Position = UDim2.new(0.03, 0, 0, 192)
+	rebirthBtn.Size = UDim2.new(0, 140, 0, 40)
 	rebirthBtn.BackgroundColor3 = Color3.fromRGB(120, 90, 180)
 	rebirthBtn.Font = Enum.Font.GothamBold
-	rebirthBtn.TextSize = 14
+	rebirthBtn.TextSize = 13
 	rebirthBtn.TextColor3 = Config.Palette.TextLight
 	rebirthBtn.Text = "Rebirth"
 	rebirthBtn.Parent = gui
 	corner(rebirthBtn, 10)
 	rebirthBtn.MouseButton1Click:Connect(function()
-		if onRebirth then
-			onRebirth()
-		end
+		Audio.Play("Click", 0.4)
+		handlers.rebirth()
 	end)
 
-	-- Seed tray
 	seedRow = Instance.new("ScrollingFrame")
 	seedRow.Name = "SeedRow"
 	seedRow.AnchorPoint = Vector2.new(0.5, 1)
@@ -253,34 +316,13 @@ function Hud.Init(handlers: { openShop: () -> (), rebirth: () -> () })
 	toastLabel.Text = ""
 	toastLabel.TextTransparency = 1
 	toastLabel.Parent = gui
-
-	-- Subtle tip pulse on first load
-	task.delay(0.6, function()
-		local tip = Instance.new("TextLabel")
-		tip.Name = "WelcomeTip"
-		tip.AnchorPoint = Vector2.new(0.5, 0.5)
-		tip.Position = UDim2.fromScale(0.5, 0.42)
-		tip.Size = UDim2.new(0.7, 0, 0, 40)
-		tip.BackgroundTransparency = 1
-		tip.Font = Enum.Font.FredokaOne
-		tip.TextScaled = true
-		tip.TextColor3 = Config.Palette.TextLight
-		tip.TextStrokeTransparency = 0.3
-		tip.Text = "Head through the arch → plant your fields!"
-		tip.Parent = gui
-		TweenService:Create(tip, TweenInfo.new(0.5), { TextTransparency = 0 }):Play()
-		task.delay(4, function()
-			TweenService:Create(tip, TweenInfo.new(0.8), { TextTransparency = 1 }):Play()
-			task.wait(0.9)
-			tip:Destroy()
-		end)
-	end)
 end
 
 function Hud.Toast(kind: string, message: string)
 	toastLabel.Text = message
 	toastLabel.TextColor3 = if kind == "err" then Config.Palette.Danger else Color3.fromRGB(220, 255, 220)
 	toastLabel.TextTransparency = 0
+	Audio.Play(if kind == "err" then "Error" else "Buy", 0.4)
 	task.delay(2.4, function()
 		TweenService:Create(toastLabel, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
 	end)
@@ -292,7 +334,10 @@ function Hud.Update(payload: Types.HudPayload, onSelectSeed: (string) -> ())
 	local tool = Config.Tools[payload.equippedTool]
 	toolLabel.Text = "Tool: " .. (if tool then tool.name else payload.equippedTool)
 	goalLabel.Text = "Next: " .. payload.goalText
-	rebirthBtn.Text = "Rebirth\n" .. formatCoins(payload.rebirthCost) .. "c"
+	rebirthBtn.Text = "Rebirth · " .. formatCoins(payload.rebirthCost)
+
+	dailyBtn.Visible = payload.dailyReady
+	dailyBtn.Text = "Daily +" .. formatCoins(payload.dailyAmount)
 
 	for _, child in seedRow:GetChildren() do
 		if child:IsA("TextButton") then
@@ -325,6 +370,7 @@ function Hud.Update(payload: Types.HudPayload, onSelectSeed: (string) -> ())
 			corner(pip, 3)
 		end
 		btn.MouseButton1Click:Connect(function()
+			Audio.Play("Click", 0.3)
 			if count > 0 then
 				onSelectSeed(seedId)
 			else

@@ -220,7 +220,35 @@ local Config = {
 		{ id = "rebirth", text = "Rebirth for permanent coin power", check = "rebirth", need = 1 },
 	},
 
+	DailyReward = {
+		baseCoins = 400,
+		rebirthBonus = 150,
+	},
+
+	-- Built-in engine sounds (work without Creator audio upload)
+	Audio = {
+		Click = "rbxasset://sounds/switch.wav",
+		Plant = "rbxasset://sounds/impact_water.wav",
+		Harvest = "rbxasset://sounds/electronicpingshort.wav",
+		Coin = "rbxasset://sounds/snap.wav",
+		Buy = "rbxasset://sounds/electronicpingshort.wav",
+		Error = "rbxasset://sounds/collide.wav",
+		Level = "rbxasset://sounds/snap.wav",
+	},
+
+	RateLimits = {
+		BuyShopItem = 0.2,
+		SelectSeed = 0.1,
+		PlantAll = 0.75,
+		HarvestAll = 0.75,
+		Rebirth = 1.5,
+		ClaimDaily = 1,
+		Prompt = 0.5,
+	},
+
 	Monetization = {
+		-- In Studio only: pretend passes are owned so you can test VIP/speed/auto
+		StudioMockPasses = true,
 		GamePassIds = {
 			VIP = 0,
 			DoubleSpeed = 0,
@@ -276,7 +304,7 @@ local Config = {
 	},
 
 	RemotesFolderName = "GardenRemotes",
-	DataStoreName = "SurgeGarden_Player_v2",
+	DataStoreName = "SurgeGarden_Player_v3",
 }
 
 Config.GamePassIds = Config.Monetization.GamePassIds

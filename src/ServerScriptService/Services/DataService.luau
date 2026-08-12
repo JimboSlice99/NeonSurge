@@ -34,6 +34,10 @@ local function emptyPlotsForZones(unlocked: { [string]: boolean }): { [string]: 
 	return plots
 end
 
+local function utcDay(): number
+	return math.floor(os.time() / 86400)
+end
+
 function DataService.DefaultData(): PlayerData
 	local unlocked = {
 		Homestead = true,
@@ -64,6 +68,8 @@ function DataService.DefaultData(): PlayerData
 		plots = emptyPlotsForZones(unlocked),
 		ownedPasses = { VIP = false, DoubleSpeed = false, AutoCollect = false },
 		rebirths = 0,
+		lastDailyDay = 0,
+		tutorialDone = false,
 		stats = { planted = 0, harvested = 0, earned = 0 },
 	}
 end
@@ -92,7 +98,7 @@ function DataService.Start()
 
 	task.spawn(function()
 		while true do
-			task.wait(40)
+			task.wait(35)
 			for _, player in Players:GetPlayers() do
 				DataService.Save(player)
 			end
@@ -109,6 +115,8 @@ function DataService.Load(player: Player): PlayerData
 		if ok and typeof(result) == "table" then
 			data.coins = math.max(0, math.floor(tonumber(result.coins) or data.coins))
 			data.rebirths = math.max(0, math.floor(tonumber(result.rebirths) or 0))
+			data.lastDailyDay = math.max(0, math.floor(tonumber(result.lastDailyDay) or 0))
+			data.tutorialDone = result.tutorialDone == true
 			if typeof(result.ownedSeeds) == "table" then
 				for seedId, count in result.ownedSeeds do
 					if typeof(seedId) == "string" and typeof(count) == "number" then
@@ -134,7 +142,6 @@ function DataService.Load(player: Player): PlayerData
 					end
 				end
 			end
-			-- migrate old Starter zone name if present
 			if typeof(result.unlockedZones) == "table" and result.unlockedZones.Starter == true then
 				data.unlockedZones.Homestead = true
 			end
@@ -168,6 +175,7 @@ function DataService.Load(player: Player): PlayerData
 	end
 	cache[player] = data
 	dirty[player] = false
+	DataService.SyncLeaderstats(player)
 	return data
 end
 
@@ -205,6 +213,7 @@ function DataService.AddCoins(player: Player, amount: number)
 	end
 	data.coins = math.max(0, data.coins + math.floor(amount))
 	DataService.MarkDirty(player)
+	DataService.SyncLeaderstats(player)
 end
 
 function DataService.SpendCoins(player: Player, amount: number): boolean
@@ -214,6 +223,7 @@ function DataService.SpendCoins(player: Player, amount: number): boolean
 	end
 	data.coins -= amount
 	DataService.MarkDirty(player)
+	DataService.SyncLeaderstats(player)
 	return true
 end
 
@@ -242,6 +252,59 @@ end
 
 function DataService.CoinMultiplier(data: PlayerData): number
 	return 1 + data.rebirths * Config.Rebirth.coinBonusPerRebirth
+end
+
+function DataService.DailyAmount(data: PlayerData): number
+	return Config.DailyReward.baseCoins + data.rebirths * Config.DailyReward.rebirthBonus
+end
+
+function DataService.IsDailyReady(data: PlayerData): boolean
+	return data.lastDailyDay < utcDay()
+end
+
+function DataService.ClaimDaily(player: Player): (boolean, string, number)
+	local data = cache[player]
+	if not data then
+		return false, "No data", 0
+	end
+	if not DataService.IsDailyReady(data) then
+		return false, "Daily already claimed — come back tomorrow!", 0
+	end
+	local amount = DataService.DailyAmount(data)
+	data.lastDailyDay = utcDay()
+	DataService.AddCoins(player, amount)
+	return true, "Daily reward +" .. tostring(amount) .. " coins!", amount
+end
+
+function DataService.SyncLeaderstats(player: Player)
+	local data = cache[player]
+	if not data then
+		return
+	end
+	local folder = player:FindFirstChild("leaderstats")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "leaderstats"
+		folder.Parent = player
+	end
+	local coins = folder:FindFirstChild("Coins")
+	if not coins then
+		coins = Instance.new("IntValue")
+		coins.Name = "Coins"
+		coins.Parent = folder
+	end
+	local rebirths = folder:FindFirstChild("Rebirths")
+	if not rebirths then
+		rebirths = Instance.new("IntValue")
+		rebirths.Name = "Rebirths"
+		rebirths.Parent = folder
+	end
+	if coins:IsA("IntValue") then
+		coins.Value = math.floor(data.coins)
+	end
+	if rebirths:IsA("IntValue") then
+		rebirths.Value = math.floor(data.rebirths)
+	end
 end
 
 return DataService

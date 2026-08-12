@@ -3,6 +3,7 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
@@ -10,6 +11,7 @@ local Remotes = require(Shared:WaitForChild("Remotes"))
 
 local DataService = require(script.Parent:WaitForChild("DataService"))
 local GardenService = require(script.Parent:WaitForChild("GardenService"))
+local RateLimiter = require(script.Parent:WaitForChild("RateLimiter"))
 
 local MonetizationService = {}
 
@@ -24,9 +26,12 @@ local function passKeyFromId(id: number): string?
 	return nil
 end
 
-local function grantPass(player: Player, passKey: string)
+local function grantPass(player: Player, passKey: string, silent: boolean?)
 	local data = DataService.Get(player)
 	if not data then
+		return
+	end
+	if data.ownedPasses[passKey] then
 		return
 	end
 	data.ownedPasses[passKey] = true
@@ -35,17 +40,46 @@ local function grantPass(player: Player, passKey: string)
 		GardenService.RecalcGrowth(player)
 	end
 	GardenService.PushHud(player)
-	Remotes.Get().Notify:FireClient(player, "ok", "Game Pass unlocked: " .. passKey)
+	if not silent then
+		Remotes.Get().Notify:FireClient(player, "ok", "Game Pass unlocked: " .. passKey)
+	end
+end
+
+function MonetizationService.WarnMissingIds()
+	local missing = {}
+	for key, id in Config.GamePassIds do
+		if type(id) ~= "number" or id <= 0 then
+			table.insert(missing, "GamePass:" .. key)
+		end
+	end
+	for key, id in Config.DevProductIds do
+		if type(id) ~= "number" or id <= 0 then
+			table.insert(missing, "DevProduct:" .. key)
+		end
+	end
+	if #missing > 0 then
+		warn("[SurgeGarden] Monetization IDs still placeholder (0). Coin shop works. Paste IDs in Config.luau before going live:\n - " .. table.concat(missing, "\n - "))
+	else
+		print("[SurgeGarden] All monetization IDs set")
+	end
 end
 
 function MonetizationService.RefreshPasses(player: Player)
+	if RunService:IsStudio() and Config.Monetization.StudioMockPasses then
+		-- Studio-only convenience so VIP/speed/auto can be playtested
+		grantPass(player, "VIP", true)
+		grantPass(player, "DoubleSpeed", true)
+		grantPass(player, "AutoCollect", true)
+		return
+	end
+
 	for passKey, passId in Config.GamePassIds do
 		if type(passId) == "number" and passId > 0 then
 			local ok, owns = pcall(function()
 				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
 			end)
 			if ok and owns then
-				grantPass(player, passKey)
+				grantPass(player, passKey, true)
 			end
 		end
 	end
@@ -54,7 +88,12 @@ end
 function MonetizationService.PromptGamePass(player: Player, passKey: string)
 	local passId = Config.GamePassIds[passKey]
 	if type(passId) ~= "number" or passId <= 0 then
-		Remotes.Get().Notify:FireClient(player, "err", "Set Game Pass ID in Config.luau first")
+		if RunService:IsStudio() then
+			grantPass(player, passKey, false)
+			Remotes.Get().Notify:FireClient(player, "ok", "[Studio] Granted " .. passKey .. " (set real ID before publish)")
+			return
+		end
+		Remotes.Get().Notify:FireClient(player, "err", "Set Game Pass ID in Config.luau, then republish")
 		return
 	end
 	MarketplaceService:PromptGamePassPurchase(player, passId)
@@ -63,7 +102,25 @@ end
 function MonetizationService.PromptProduct(player: Player, productKey: string)
 	local productId = Config.DevProductIds[productKey]
 	if type(productId) ~= "number" or productId <= 0 then
-		Remotes.Get().Notify:FireClient(player, "err", "Set Dev Product ID in Config.luau first")
+		if RunService:IsStudio() then
+			local data = DataService.Get(player)
+			if not data then
+				return
+			end
+			if productKey == "CoinsSmall" then
+				DataService.AddCoins(player, Config.DevProductRewards.CoinsSmall)
+			elseif productKey == "CoinsBig" then
+				DataService.AddCoins(player, Config.DevProductRewards.CoinsBig)
+			elseif productKey == "RareSeedPack" then
+				GardenService.GrantSeedPack(player)
+			elseif productKey == "ZoneSkip" then
+				GardenService.UnlockNextZone(player)
+			end
+			GardenService.PushHud(player)
+			Remotes.Get().Notify:FireClient(player, "ok", "[Studio] Mock purchase: " .. productKey)
+			return
+		end
+		Remotes.Get().Notify:FireClient(player, "err", "Set Dev Product ID in Config.luau, then republish")
 		return
 	end
 	MarketplaceService:PromptProductPurchase(player, productId)
@@ -100,9 +157,13 @@ end
 
 function MonetizationService.Start()
 	local remotes = Remotes.Get()
+	MonetizationService.WarnMissingIds()
 
 	remotes.PromptGamePass.OnServerEvent:Connect(function(player: Player, passKey: unknown)
 		if typeof(passKey) ~= "string" then
+			return
+		end
+		if not RateLimiter.Allow(player, "PromptPass", Config.RateLimits.Prompt) then
 			return
 		end
 		MonetizationService.PromptGamePass(player, passKey)
@@ -110,6 +171,9 @@ function MonetizationService.Start()
 
 	remotes.PromptProduct.OnServerEvent:Connect(function(player: Player, productKey: unknown)
 		if typeof(productKey) ~= "string" then
+			return
+		end
+		if not RateLimiter.Allow(player, "PromptProduct", Config.RateLimits.Prompt) then
 			return
 		end
 		MonetizationService.PromptProduct(player, productKey)
@@ -121,7 +185,7 @@ function MonetizationService.Start()
 		end
 		local key = passKeyFromId(passId)
 		if key then
-			grantPass(player, key)
+			grantPass(player, key, false)
 		end
 	end)
 
@@ -136,7 +200,6 @@ function MonetizationService.Start()
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
 
-		-- Wait briefly for data load on late join receipts
 		local data = DataService.Get(player)
 		if not data then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
