@@ -7,62 +7,62 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local Remotes = require(game:GetService("ReplicatedStorage").Shared.Remotes)
 local Types = require(game:GetService("ReplicatedStorage").Shared.Types)
 local ArenaBuilder = require(script.Parent.ArenaBuilder)
-local Remotes = require(game:GetService("ReplicatedStorage").Shared.Remotes)
 
 type EnemyKind = Types.EnemyKind
 
 local DEFS = {
 	Runner = {
-		Name = "Pulse Runner",
-		Health = 30,
-		Speed = 15,
-		Damage = 8,
-		TouchCooldown = 0.65,
-		Color = Color3.fromRGB(0, 255, 200),
-		Size = Vector3.new(2.1, 2.1, 2.1),
-		Score = 20,
-		Xp = 8,
+		Name = "Wisp",
+		Health = 28,
+		Speed = 16,
+		Damage = 7,
+		TouchCooldown = 0.6,
+		Color = Color3.fromRGB(60, 200, 190),
+		Size = Vector3.new(1.8, 1.8, 1.8),
+		Score = 18,
+		Xp = 7,
 		Credits = 1,
 	},
 	Shooter = {
-		Name = "Arc Spitter",
-		Health = 40,
+		Name = "Spire",
+		Health = 42,
 		Speed = 10,
 		Damage = 6,
 		TouchCooldown = 0.8,
-		Color = Color3.fromRGB(255, 200, 60),
-		Size = Vector3.new(2.4, 2.4, 2.4),
-		Score = 35,
-		Xp = 12,
+		Color = Color3.fromRGB(210, 160, 70),
+		Size = Vector3.new(1.6, 3.2, 1.6),
+		Score = 32,
+		Xp = 11,
 		Credits = 2,
-		Range = 28,
-		ShootCd = 1.6,
+		Range = 30,
+		ShootCd = 1.5,
 	},
 	Bruiser = {
-		Name = "Volt Bruiser",
-		Health = 110,
-		Speed = 9,
-		Damage = 16,
+		Name = "Bulwark",
+		Health = 120,
+		Speed = 8.5,
+		Damage = 15,
 		TouchCooldown = 0.85,
-		Color = Color3.fromRGB(255, 70, 180),
-		Size = Vector3.new(3.4, 3.4, 3.4),
-		Score = 60,
-		Xp = 20,
+		Color = Color3.fromRGB(200, 70, 140),
+		Size = Vector3.new(3.1, 3.1, 3.1),
+		Score = 55,
+		Xp = 18,
 		Credits = 3,
 	},
 	Boss = {
-		Name = "Neon Overlord",
-		Health = 700,
-		Speed = 11,
-		Damage = 22,
+		Name = "Overlord",
+		Health = 780,
+		Speed = 10.5,
+		Damage = 20,
 		TouchCooldown = 0.7,
-		Color = Color3.fromRGB(170, 90, 255),
-		Size = Vector3.new(6.5, 6.5, 6.5),
-		Score = 500,
-		Xp = 80,
-		Credits = 25,
+		Color = Color3.fromRGB(140, 90, 220),
+		Size = Vector3.new(5.8, 5.8, 5.8),
+		Score = 520,
+		Xp = 90,
+		Credits = 30,
 	},
 }
 
@@ -72,7 +72,7 @@ local folder: Folder? = nil
 local alive: { [Model]: boolean } = {}
 local touchClock: { [Model]: number } = {}
 local shootClock: { [Model]: number } = {}
-local onEnemyDied: ((Player?, EnemyKind, number, number, number) -> ())? = nil
+local onEnemyDied: ((Player?, EnemyKind, number, number, number, Vector3) -> ())? = nil
 local onPlayerDamaged: ((Player, number) -> ())? = nil
 local heartbeat: RBXScriptConnection? = nil
 
@@ -122,11 +122,13 @@ local function fireEnemyBolt(from: Vector3, toward: Vector3, damage: number)
 	local bolt = Instance.new("Part")
 	bolt.Name = "EnemyBolt"
 	bolt.Shape = Enum.PartType.Ball
-	bolt.Size = Vector3.new(1.1, 1.1, 1.1)
+	bolt.Size = Vector3.new(0.9, 0.9, 0.9)
 	bolt.Color = Config.Palette.Gold
 	bolt.Material = Enum.Material.Neon
 	bolt.CanCollide = false
 	bolt.Massless = true
+	bolt.CastShadow = false
+	bolt.Transparency = 0.1
 	bolt.CFrame = CFrame.new(from + dir * 2 + Vector3.new(0, 1.5, 0))
 	bolt.Parent = Workspace
 
@@ -135,7 +137,7 @@ local function fireEnemyBolt(from: Vector3, toward: Vector3, damage: number)
 	local vel = Instance.new("LinearVelocity")
 	vel.Attachment0 = att
 	vel.MaxForce = math.huge
-	vel.VectorVelocity = dir * 55
+	vel.VectorVelocity = dir * 58
 	vel.Parent = bolt
 
 	local hit = false
@@ -156,22 +158,19 @@ local function fireEnemyBolt(from: Vector3, toward: Vector3, damage: number)
 			conn:Disconnect()
 		end
 	end)
-
-	Debris:AddItem(bolt, 3)
+	Debris:AddItem(bolt, 2.8)
 end
 
 function EnemyService.init(hooks: {
-	onEnemyDied: (Player?, EnemyKind, number, number, number) -> (),
+	onEnemyDied: (Player?, EnemyKind, number, number, number, Vector3) -> (),
 	onPlayerDamaged: (Player, number) -> (),
 })
 	onEnemyDied = hooks.onEnemyDied
 	onPlayerDamaged = hooks.onPlayerDamaged
 	enemyFolder()
-
 	if heartbeat then
 		heartbeat:Disconnect()
 	end
-
 	heartbeat = RunService.Heartbeat:Connect(function()
 		for model in pairs(alive) do
 			if not model.Parent then
@@ -183,7 +182,6 @@ function EnemyService.init(hooks: {
 			if not root or not humanoid or humanoid.Health <= 0 then
 				continue
 			end
-
 			local target = nearestPlayer(root.Position)
 			local kind = model:GetAttribute("Kind")
 			if target then
@@ -192,7 +190,6 @@ function EnemyService.init(hooks: {
 				local dist = flat.Magnitude
 				if dist > 0.2 then
 					local dir = flat.Unit
-					-- Shooters kite a bit
 					if kind == "Shooter" and dist < 16 then
 						humanoid:Move(-dir, false)
 					else
@@ -200,18 +197,15 @@ function EnemyService.init(hooks: {
 					end
 					root.CFrame = CFrame.lookAt(root.Position, root.Position + dir)
 				end
-
 				if kind == "Shooter" then
 					local def = DEFS.Shooter
 					local now = os.clock()
-					local last = shootClock[model] or 0
-					if dist <= (def.Range :: number) and now - last >= (def.ShootCd :: number) then
+					if dist <= (def.Range :: number) and now - (shootClock[model] or 0) >= (def.ShootCd :: number) then
 						shootClock[model] = now
 						fireEnemyBolt(root.Position, target.Position, def.Damage)
 					end
 				end
 			end
-
 			local flatPos = Vector3.new(root.Position.X, 0, root.Position.Z)
 			if flatPos.Magnitude > Config.Arena.Radius - 2 then
 				local push = flatPos.Unit * (Config.Arena.Radius - 4)
@@ -245,7 +239,7 @@ end
 
 function EnemyService.spawn(kind: EnemyKind, wave: number): Model
 	local def = DEFS[kind]
-	local hpScale = 1 + (wave - 1) * 0.12
+	local hpScale = 1 + (wave - 1) * 0.13
 	local model = Instance.new("Model")
 	model.Name = def.Name
 
@@ -259,23 +253,78 @@ function EnemyService.spawn(kind: EnemyKind, wave: number): Model
 
 	local body = Instance.new("Part")
 	body.Name = "Body"
-	body.Shape = Enum.PartType.Ball
-	body.Size = def.Size
-	body.Color = def.Color
-	body.Material = Enum.Material.Neon
+	if kind == "Shooter" then
+		body.Size = def.Size
+		body.Material = Enum.Material.SmoothPlastic
+	elseif kind == "Bruiser" then
+		body.Size = def.Size
+		body.Shape = Enum.PartType.Cylinder
+		body.Material = Enum.Material.SmoothPlastic
+	elseif kind == "Boss" then
+		body.Size = def.Size
+		body.Shape = Enum.PartType.Ball
+		body.Material = Enum.Material.SmoothPlastic
+	else
+		body.Shape = Enum.PartType.Ball
+		body.Size = def.Size
+		body.Material = Enum.Material.SmoothPlastic
+	end
+	body.Color = Color3.fromRGB(
+		math.floor(def.Color.R * 255 * 0.35),
+		math.floor(def.Color.G * 255 * 0.35),
+		math.floor(def.Color.B * 255 * 0.35)
+	)
 	body.CFrame = root.CFrame
 	body.Parent = model
+
+	-- Accent core (small neon, no PointLight)
+	local core = Instance.new("Part")
+	core.Name = "Core"
+	core.Shape = Enum.PartType.Ball
+	core.Size = def.Size * 0.35
+	core.Color = def.Color
+	core.Material = Enum.Material.Neon
+	core.CanCollide = false
+	core.Massless = true
+	core.CastShadow = false
+	core.Transparency = 0.15
+	core.CFrame = root.CFrame
+	core.Parent = model
 
 	local weld = Instance.new("WeldConstraint")
 	weld.Part0 = root
 	weld.Part1 = body
 	weld.Parent = root
+	local weld2 = Instance.new("WeldConstraint")
+	weld2.Part0 = root
+	weld2.Part1 = core
+	weld2.Parent = root
 
-	local light = Instance.new("PointLight")
-	light.Color = def.Color
-	light.Brightness = if kind == "Boss" then 5 else 2.2
-	light.Range = if kind == "Boss" then 30 else 14
-	light.Parent = body
+	local highlight = Instance.new("Highlight")
+	highlight.FillColor = def.Color
+	highlight.OutlineColor = def.Color
+	highlight.FillTransparency = 0.85
+	highlight.OutlineTransparency = 0.35
+	highlight.Parent = model
+
+	if kind == "Boss" then
+		local billboard = Instance.new("BillboardGui")
+		billboard.Size = UDim2.fromOffset(120, 14)
+		billboard.StudsOffset = Vector3.new(0, def.Size.Y * 0.65, 0)
+		billboard.AlwaysOnTop = true
+		billboard.Parent = body
+		local bg = Instance.new("Frame")
+		bg.Size = UDim2.fromScale(1, 1)
+		bg.BackgroundColor3 = Color3.fromRGB(10, 10, 16)
+		bg.BorderSizePixel = 0
+		bg.Parent = billboard
+		local fill = Instance.new("Frame")
+		fill.Name = "Fill"
+		fill.Size = UDim2.fromScale(1, 1)
+		fill.BackgroundColor3 = def.Color
+		fill.BorderSizePixel = 0
+		fill.Parent = bg
+	end
 
 	local humanoid = Instance.new("Humanoid")
 	humanoid.MaxHealth = def.Health * hpScale
@@ -283,6 +332,17 @@ function EnemyService.spawn(kind: EnemyKind, wave: number): Model
 	humanoid.WalkSpeed = def.Speed
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.Parent = model
+
+	if kind == "Boss" then
+		humanoid.HealthChanged:Connect(function(h)
+			local gui = body:FindFirstChildOfClass("BillboardGui")
+			local frame = gui and gui:FindFirstChildOfClass("Frame")
+			local fill = frame and frame:FindFirstChild("Fill")
+			if fill and fill:IsA("Frame") then
+				fill.Size = UDim2.fromScale(math.clamp(h / humanoid.MaxHealth, 0, 1), 1)
+			end
+		end)
+	end
 
 	model.PrimaryPart = root
 	model:SetAttribute("Kind", kind)
@@ -301,12 +361,13 @@ function EnemyService.spawn(kind: EnemyKind, wave: number): Model
 		if typeof(killerAttr) == "number" then
 			killer = Players:GetPlayerByUserId(killerAttr)
 		end
+		local pos = root.Position
 		if onEnemyDied then
-			onEnemyDied(killer, kind, def.Score, def.Xp, model:GetAttribute("Credits") :: number)
+			onEnemyDied(killer, kind, def.Score, def.Xp, model:GetAttribute("Credits") :: number, pos)
 		end
 		Remotes.get("FxBurst"):FireAllClients({
 			kind = "kill",
-			position = root.Position,
+			position = pos,
 			color = def.Color,
 		})
 		Debris:AddItem(model, 0.05)

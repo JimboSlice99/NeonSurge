@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local Remotes = require(game:GetService("ReplicatedStorage").Shared.Remotes)
+local SoundUtil = require(game:GetService("ReplicatedStorage").Shared.SoundUtil)
 local EnemyService = require(script.Parent.EnemyService)
 
 export type CombatProfile = {
@@ -72,6 +73,28 @@ local function nearestEnemyDir(from: Vector3): Vector3?
 	return best
 end
 
+local function addTrail(part: BasePart, color: Color3)
+	local a0 = Instance.new("Attachment")
+	a0.Position = Vector3.new(0, 0, 0.2)
+	a0.Parent = part
+	local a1 = Instance.new("Attachment")
+	a1.Position = Vector3.new(0, 0, -0.2)
+	a1.Parent = part
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = a0
+	trail.Attachment1 = a1
+	trail.Color = ColorSequence.new(color)
+	trail.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.25),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	trail.Lifetime = 0.18
+	trail.MinLength = 0.05
+	trail.LightEmission = 0.4
+	trail.FaceCamera = true
+	trail.Parent = part
+end
+
 function CombatService.init()
 	projFolder()
 	Remotes.get("RequestFire").OnServerEvent:Connect(function(player, aim)
@@ -112,14 +135,11 @@ local function spawnBolt(player: Player, origin: Vector3, direction: Vector3, pr
 	bolt.Material = Enum.Material.Neon
 	bolt.CanCollide = false
 	bolt.Massless = true
-	bolt.CFrame = CFrame.new(origin + direction * 2.4 + Vector3.new(0, 1.3, 0))
+	bolt.CastShadow = false
+	bolt.Transparency = 0.05
+	bolt.CFrame = CFrame.new(origin + direction * 2.2 + Vector3.new(0, 1.25, 0), origin + direction * 4)
 	bolt.Parent = projFolder()
-
-	local light = Instance.new("PointLight")
-	light.Color = Config.Palette.Cyan
-	light.Brightness = 2.2
-	light.Range = 10
-	light.Parent = bolt
+	addTrail(bolt, Config.Palette.Cyan)
 
 	local att = Instance.new("Attachment")
 	att.Parent = bolt
@@ -154,7 +174,6 @@ local function spawnBolt(player: Player, origin: Vector3, direction: Vector3, pr
 			pierceLeft -= 1
 		end
 	end)
-
 	Debris:AddItem(bolt, Config.Player.ProjectileLifetime)
 end
 
@@ -164,7 +183,6 @@ function CombatService.tryFire(player: Player, aim: any)
 	if now - (fireClock[player] or 0) < 1 / math.max(profile.fireRate, 0.5) then
 		return
 	end
-
 	local root = rootOf(player)
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if not root or not humanoid or humanoid.Health <= 0 then
@@ -188,9 +206,10 @@ function CombatService.tryFire(player: Player, aim: any)
 	end
 
 	fireClock[player] = now
+	SoundUtil.play("Shoot", 0.12, root)
 
 	local count = math.clamp(profile.projectileCount, 1, 7)
-	local spread = if count == 1 then 0 else math.rad(10 + count * 2)
+	local spread = if count == 1 then 0 else math.rad(9 + count * 2)
 	for i = 1, count do
 		local t = if count == 1 then 0 else (i - 1) / (count - 1) - 0.5
 		local dir = (CFrame.lookAt(Vector3.zero, direction) * CFrame.Angles(0, t * spread, 0)).LookVector
@@ -227,6 +246,7 @@ function CombatService.tryDash(player: Player, dir: any)
 
 	dashClock[player] = now
 	character:SetAttribute("IFrames", true)
+	SoundUtil.play("Dash", 0.3, root)
 
 	local attachment = root:FindFirstChild("DashAttachment") :: Attachment?
 	if not attachment then

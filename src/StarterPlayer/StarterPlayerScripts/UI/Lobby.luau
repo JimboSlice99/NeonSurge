@@ -1,6 +1,7 @@
 --!strict
 
 local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Config"))
 local Remotes = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Remotes"))
@@ -17,21 +18,35 @@ local bestLabel: TextLabel
 local metaFrame: Frame
 local onPlay: (() -> ())? = nil
 
-local function textButton(parent: Instance, text: string, size: UDim2, pos: UDim2, color: Color3): TextButton
+local function stylePanel(frame: Frame)
+	frame.BackgroundColor3 = Config.Palette.Panel
+	frame.BackgroundTransparency = 0.08
+	frame.BorderSizePixel = 0
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = frame
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = Color3.fromRGB(40, 55, 70)
+	stroke.Thickness = 1
+	stroke.Transparency = 0.2
+	stroke.Parent = frame
+end
+
+local function btn(parent: Instance, text: string, size: UDim2, pos: UDim2, bg: Color3, fg: Color3): TextButton
 	local b = Instance.new("TextButton")
 	b.Size = size
 	b.Position = pos
-	b.BackgroundColor3 = color
+	b.BackgroundColor3 = bg
 	b.Text = text
-	b.Font = Enum.Font.GothamBlack
-	b.TextSize = 20
-	b.TextColor3 = Color3.new(1, 1, 1)
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 15
+	b.TextColor3 = fg
 	b.AutoButtonColor = true
 	b.BorderSizePixel = 0
 	b.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 8)
-	corner.Parent = b
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 7)
+	c.Parent = b
 	return b
 end
 
@@ -51,67 +66,60 @@ function Lobby.mount(playCallback: () -> ())
 
 	local panel = Instance.new("Frame")
 	panel.Name = "Panel"
-	panel.Size = UDim2.fromOffset(420, 560)
-	panel.Position = UDim2.new(1, -444, 0.5, -280)
-	panel.BackgroundColor3 = Color3.fromRGB(8, 12, 28)
-	panel.BackgroundTransparency = 0.12
-	panel.BorderSizePixel = 0
+	panel.Size = UDim2.fromOffset(380, 540)
+	panel.Position = UDim2.new(1, -404, 0.5, -270)
 	panel.Parent = gui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 12)
-	corner.Parent = panel
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Config.Palette.Cyan
-	stroke.Thickness = 2
-	stroke.Parent = panel
+	stylePanel(panel)
 
-	local title = Instance.new("TextLabel")
-	title.BackgroundTransparency = 1
-	title.Size = UDim2.new(1, -24, 0, 40)
-	title.Position = UDim2.fromOffset(12, 12)
-	title.Font = Enum.Font.GothamBlack
-	title.TextSize = 28
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.TextColor3 = Config.Palette.Cyan
-	title.Text = Config.GameName
-	title.Parent = panel
+	local brand = Instance.new("TextLabel")
+	brand.BackgroundTransparency = 1
+	brand.Size = UDim2.new(1, -28, 0, 34)
+	brand.Position = UDim2.fromOffset(14, 16)
+	brand.Font = Enum.Font.GothamBlack
+	brand.TextSize = 26
+	brand.TextXAlignment = Enum.TextXAlignment.Left
+	brand.TextColor3 = Config.Palette.Cyan
+	brand.Text = Config.GameName
+	brand.Parent = panel
 
 	local tag = Instance.new("TextLabel")
 	tag.BackgroundTransparency = 1
-	tag.Size = UDim2.new(1, -24, 0, 22)
-	tag.Position = UDim2.fromOffset(12, 50)
+	tag.Size = UDim2.new(1, -28, 0, 20)
+	tag.Position = UDim2.fromOffset(14, 50)
 	tag.Font = Enum.Font.Gotham
-	tag.TextSize = 16
+	tag.TextSize = 14
 	tag.TextXAlignment = Enum.TextXAlignment.Left
-	tag.TextColor3 = Config.Palette.Magenta
-	tag.Text = "Roguelite arena shooter · bank credits · get stronger"
+	tag.TextColor3 = Config.Palette.Muted
+	tag.Text = "Dark arena roguelite · bank power between runs"
 	tag.Parent = panel
 
 	creditsLabel = Instance.new("TextLabel")
 	creditsLabel.BackgroundTransparency = 1
-	creditsLabel.Size = UDim2.new(1, -24, 0, 24)
-	creditsLabel.Position = UDim2.fromOffset(12, 84)
+	creditsLabel.Size = UDim2.new(1, -28, 0, 22)
+	creditsLabel.Position = UDim2.fromOffset(14, 84)
 	creditsLabel.Font = Enum.Font.GothamBold
-	creditsLabel.TextSize = 18
+	creditsLabel.TextSize = 16
 	creditsLabel.TextXAlignment = Enum.TextXAlignment.Left
 	creditsLabel.TextColor3 = Config.Palette.Gold
-	creditsLabel.Text = "CREDITS 0"
+	creditsLabel.Text = "Credits 0"
 	creditsLabel.Parent = panel
 
 	bestLabel = Instance.new("TextLabel")
 	bestLabel.BackgroundTransparency = 1
-	bestLabel.Size = UDim2.new(1, -24, 0, 22)
-	bestLabel.Position = UDim2.fromOffset(12, 110)
+	bestLabel.Size = UDim2.new(1, -28, 0, 20)
+	bestLabel.Position = UDim2.fromOffset(14, 108)
 	bestLabel.Font = Enum.Font.Gotham
-	bestLabel.TextSize = 15
+	bestLabel.TextSize = 13
 	bestLabel.TextXAlignment = Enum.TextXAlignment.Left
-	bestLabel.TextColor3 = Color3.fromRGB(220, 230, 255)
-	bestLabel.Text = "Best score 0 · Best wave 0"
+	bestLabel.TextColor3 = Config.Palette.Muted
+	bestLabel.Text = "Best 0 · Wave 0"
 	bestLabel.Parent = panel
 
-	local play = textButton(panel, "PLAY RUN", UDim2.new(1, -24, 0, 48), UDim2.fromOffset(12, 150), Config.Palette.Cyan)
-	play.TextColor3 = Color3.fromRGB(10, 20, 40)
+	local play = btn(panel, "START RUN", UDim2.new(1, -28, 0, 46), UDim2.fromOffset(14, 142), Config.Palette.Cyan, Color3.fromRGB(8, 16, 22))
+	play.TextSize = 18
+	play.Font = Enum.Font.GothamBlack
 	play.MouseButton1Click:Connect(function()
+		TweenService:Create(panel, TweenInfo.new(0.2), { BackgroundTransparency = 0.4 }):Play()
 		if onPlay then
 			onPlay()
 		end
@@ -120,42 +128,51 @@ function Lobby.mount(playCallback: () -> ())
 
 	local shopTitle = Instance.new("TextLabel")
 	shopTitle.BackgroundTransparency = 1
-	shopTitle.Size = UDim2.new(1, -24, 0, 24)
-	shopTitle.Position = UDim2.fromOffset(12, 214)
-	shopTitle.Font = Enum.Font.GothamBlack
-	shopTitle.TextSize = 16
+	shopTitle.Size = UDim2.new(1, -28, 0, 20)
+	shopTitle.Position = UDim2.fromOffset(14, 206)
+	shopTitle.Font = Enum.Font.GothamBold
+	shopTitle.TextSize = 13
 	shopTitle.TextXAlignment = Enum.TextXAlignment.Left
-	shopTitle.TextColor3 = Color3.new(1, 1, 1)
-	shopTitle.Text = "PERMANENT UPGRADES"
+	shopTitle.TextColor3 = Config.Palette.Text
+	shopTitle.Text = "LOADOUT"
 	shopTitle.Parent = panel
 
 	metaFrame = Instance.new("Frame")
 	metaFrame.BackgroundTransparency = 1
-	metaFrame.Size = UDim2.new(1, -24, 0, 200)
-	metaFrame.Position = UDim2.fromOffset(12, 242)
+	metaFrame.Size = UDim2.new(1, -28, 0, 210)
+	metaFrame.Position = UDim2.fromOffset(14, 230)
 	metaFrame.Parent = panel
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 6)
+	layout.Parent = metaFrame
 
 	local passTitle = Instance.new("TextLabel")
 	passTitle.BackgroundTransparency = 1
-	passTitle.Size = UDim2.new(1, -24, 0, 22)
-	passTitle.Position = UDim2.fromOffset(12, 450)
-	passTitle.Font = Enum.Font.GothamBlack
-	passTitle.TextSize = 15
+	passTitle.Size = UDim2.new(1, -28, 0, 18)
+	passTitle.Position = UDim2.fromOffset(14, 448)
+	passTitle.Font = Enum.Font.GothamBold
+	passTitle.TextSize = 12
 	passTitle.TextXAlignment = Enum.TextXAlignment.Left
-	passTitle.TextColor3 = Color3.new(1, 1, 1)
-	passTitle.Text = "GAMEPASSES / PACKS"
+	passTitle.TextColor3 = Config.Palette.Muted
+	passTitle.Text = "SUPPORT / BOOSTS"
 	passTitle.Parent = panel
 
-	local y = 478
 	local products = {
-		{ "2x Credits", "DoubleCredits", Config.Palette.Gold },
-		{ "VIP Trail", "VipTrail", Config.Palette.Violet },
-		{ "Extra Dash", "ExtraDash", Config.Palette.Magenta },
-		{ "+500 Credits", "CreditPackSmall", Config.Palette.Lime },
+		{ "2× Credits", "DoubleCredits" },
+		{ "VIP Aura", "VipTrail" },
+		{ "Dash+", "ExtraDash" },
+		{ "+500", "CreditPackSmall" },
 	}
 	for i, row in products do
-		local b = textButton(panel, row[1], UDim2.fromOffset(90, 32), UDim2.fromOffset(12 + (i - 1) * 98, y), row[3])
-		b.TextSize = 12
+		local b = btn(
+			panel,
+			row[1],
+			UDim2.fromOffset(82, 30),
+			UDim2.fromOffset(14 + (i - 1) * 88, 474),
+			Color3.fromRGB(22, 28, 42),
+			Config.Palette.Text
+		)
+		b.TextSize = 11
 		b.MouseButton1Click:Connect(function()
 			Remotes.get("RequestBuyProduct"):FireServer(row[2])
 		end)
@@ -172,26 +189,27 @@ function Lobby.apply(snapshot: LobbySnapshot)
 	if not gui then
 		return
 	end
-	creditsLabel.Text = ("CREDITS  %d"):format(snapshot.credits)
-	bestLabel.Text = ("Best score %d · Best wave %d"):format(snapshot.highScore, snapshot.bestWave)
+	creditsLabel.Text = ("Credits  %d"):format(snapshot.credits)
+	bestLabel.Text = ("Best %d  ·  Wave %d"):format(snapshot.highScore, snapshot.bestWave)
 
-	metaFrame:ClearAllChildren()
-	local layout = Instance.new("UIListLayout")
-	layout.Padding = UDim.new(0, 6)
-	layout.Parent = metaFrame
+	for _, child in metaFrame:GetChildren() do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
 
 	for _, item in snapshot.meta do
 		local row = Instance.new("TextButton")
-		row.Size = UDim2.new(1, 0, 0, 34)
-		row.BackgroundColor3 = if item.affordable then Color3.fromRGB(20, 30, 60) else Color3.fromRGB(16, 18, 28)
+		row.Size = UDim2.new(1, 0, 0, 36)
+		row.BackgroundColor3 = Color3.fromRGB(16, 20, 32)
 		row.AutoButtonColor = item.affordable
 		row.BorderSizePixel = 0
 		row.Font = Enum.Font.Gotham
-		row.TextSize = 14
-		row.TextColor3 = Color3.new(1, 1, 1)
+		row.TextSize = 13
+		row.TextColor3 = if item.affordable then Config.Palette.Text else Config.Palette.Muted
 		row.TextXAlignment = Enum.TextXAlignment.Left
 		local costText = if item.level >= item.maxLevel then "MAX" else (tostring(item.cost) .. " cr")
-		row.Text = ("  %s  Lv%d/%d  ·  %s"):format(item.name, item.level, item.maxLevel, costText)
+		row.Text = ("  %s   %d/%d     %s"):format(item.name, item.level, item.maxLevel, costText)
 		row.Parent = metaFrame
 		local c = Instance.new("UICorner")
 		c.CornerRadius = UDim.new(0, 6)

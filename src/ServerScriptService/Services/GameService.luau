@@ -6,11 +6,13 @@ local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 local Remotes = require(game:GetService("ReplicatedStorage").Shared.Remotes)
 local Types = require(game:GetService("ReplicatedStorage").Shared.Types)
 local Upgrades = require(game:GetService("ReplicatedStorage").Shared.Upgrades)
+local SoundUtil = require(game:GetService("ReplicatedStorage").Shared.SoundUtil)
 local ArenaBuilder = require(script.Parent.ArenaBuilder)
 local CombatService = require(script.Parent.CombatService)
 local DataService = require(script.Parent.DataService)
 local EnemyService = require(script.Parent.EnemyService)
 local MonetizationService = require(script.Parent.MonetizationService)
+local PickupService = require(script.Parent.PickupService)
 
 type GamePhase = Types.GamePhase
 type HudSnapshot = Types.HudSnapshot
@@ -124,11 +126,13 @@ local function applyCombatProfile(player: Player, state: RunState)
 		dashCooldown = Config.Player.DashCooldown * state.stats.dashCooldownMul * math.max(dashMeta, 0.4),
 	})
 
+	local magnet = state.stats.pickupMul * (1 + metaLevel(player, "magnet") * 0.2)
+	PickupService.setMagnetMul(player, magnet)
+
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		local moveMeta = 1 + 0 -- reserved
-		humanoid.WalkSpeed = Config.Player.BaseWalkSpeed * state.stats.moveMul * moveMeta
+		humanoid.WalkSpeed = Config.Player.BaseWalkSpeed * state.stats.moveMul
 		humanoid.MaxHealth = state.maxHealth
 		humanoid.Health = math.min(state.health, state.maxHealth)
 	end
@@ -195,6 +199,7 @@ local function endRun(player: Player)
 	DataService.save(player)
 
 	EnemyService.clear()
+	PickupService.clear()
 	local msg = ("BANKED %d CREDITS"):format(banked)
 	if beat then
 		msg ..= " · NEW HIGH SCORE"
@@ -231,6 +236,7 @@ local function offerLevelUp(player: Player)
 	local state = ensureRun(player)
 	state.phase = "LevelUp"
 	state.pendingUpgrades = Upgrades.rollOptions(3)
+	SoundUtil.play("LevelUp", 0.45)
 	Remotes.get("UpgradeChoices"):FireClient(player, state.pendingUpgrades)
 	pushHud(player, "CHOOSE AN UPGRADE")
 end
@@ -244,12 +250,11 @@ local function grantXp(player: Player, amount: number)
 		state.level += 1
 		need = xpNeed(state.level)
 		offerLevelUp(player)
-		-- only one picker at a time; break and resume after choose
 		break
 	end
 end
 
-local function onEnemyDied(player: Player?, kind: EnemyKind, score: number, xp: number, credits: number)
+local function onEnemyDied(player: Player?, kind: EnemyKind, score: number, xp: number, credits: number, position: Vector3)
 	if not player then
 		return
 	end
@@ -268,11 +273,12 @@ local function onEnemyDied(player: Player?, kind: EnemyKind, score: number, xp: 
 	state.kills += 1
 
 	local mult = 1 + math.min(state.combo, 15) * 0.12
-	-- Bosses keep full score weight via credits/xp from EnemyService; kind reserved for future modifiers
 	local kindMul = if kind == "Boss" then 1.15 else 1
 	local gained = math.floor(score * mult * kindMul)
 	state.score += gained
 	state.creditsRun += credits
+
+	PickupService.spawnXp(position, xp)
 
 	if state.leech then
 		state.health = math.min(state.maxHealth, state.health + 2)
@@ -280,13 +286,6 @@ local function onEnemyDied(player: Player?, kind: EnemyKind, score: number, xp: 
 		if humanoid then
 			humanoid.Health = state.health
 		end
-	end
-
-	if state.phase ~= "LevelUp" then
-		grantXp(player, xp)
-	else
-		-- bank xp while choosing
-		state.xp += xp
 	end
 	pushHud(player)
 end
@@ -362,6 +361,7 @@ local function startRun(player: Player)
 	local token = state.token
 
 	EnemyService.clear()
+	PickupService.clear()
 	state.active = true
 	state.phase = "Countdown"
 	state.wave = 0
@@ -456,6 +456,20 @@ function GameService.start()
 	DataService.init()
 	MonetizationService.init()
 	CombatService.init()
+	PickupService.init({
+		onCollect = function(player, amount)
+			local state = ensureRun(player)
+			if not state.active then
+				return
+			end
+			if state.phase == "LevelUp" then
+				state.xp += amount
+			else
+				grantXp(player, amount)
+			end
+			pushHud(player)
+		end,
+	})
 	EnemyService.init({
 		onEnemyDied = onEnemyDied,
 		onPlayerDamaged = damagePlayer,

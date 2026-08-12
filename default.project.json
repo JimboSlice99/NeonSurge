@@ -16,58 +16,68 @@
         "$path": "src/StarterPlayer/StarterPlayerScripts"
       },
       "$properties": {
-        "CameraMaxZoomDistance": 28,
-        "CameraMinZoomDistance": 12,
-        "CharacterWalkSpeed": 22,
+        "CameraMaxZoomDistance": 32,
+        "CameraMinZoomDistance": 14,
+        "CharacterWalkSpeed": 24,
         "CharacterJumpPower": 50
       }
     },
 
     "Lighting": {
       "$properties": {
-        "Ambient": [0.25, 0.28, 0.4],
-        "Brightness": 2.2,
-        "ClockTime": 20,
-        "FogColor": [0.05, 0.08, 0.18],
-        "FogEnd": 400,
-        "FogStart": 120,
+        "Ambient": [0.08, 0.09, 0.14],
+        "Brightness": 0.85,
+        "ClockTime": 0.3,
+        "ExposureCompensation": 0.15,
+        "FogColor": [0.02, 0.03, 0.07],
+        "FogEnd": 180,
+        "FogStart": 55,
         "GlobalShadows": true,
-        "OutdoorAmbient": [0.2, 0.22, 0.35],
+        "OutdoorAmbient": [0.1, 0.11, 0.18],
         "Technology": "ShadowMap"
       },
       "Atmosphere": {
         "$className": "Atmosphere",
         "$properties": {
-          "Color": [0.2, 0.28, 0.5],
-          "Decay": [0.25, 0.18, 0.4],
-          "Density": 0.18,
-          "Glare": 0.15,
-          "Haze": 0.6,
-          "Offset": 0.05
+          "Color": [0.08, 0.1, 0.18],
+          "Decay": [0.2, 0.12, 0.28],
+          "Density": 0.32,
+          "Glare": 0.05,
+          "Haze": 1.8,
+          "Offset": 0.2
         }
       },
       "ColorCorrection": {
         "$className": "ColorCorrectionEffect",
         "$properties": {
-          "Brightness": 0.05,
-          "Contrast": 0.12,
-          "Saturation": 0.2,
-          "TintColor": [0.95, 0.98, 1.1]
+          "Brightness": -0.04,
+          "Contrast": 0.18,
+          "Saturation": -0.05,
+          "TintColor": [0.85, 0.92, 1.05]
         }
       },
       "Bloom": {
         "$className": "BloomEffect",
         "$properties": {
-          "Intensity": 0.7,
-          "Size": 24,
-          "Threshold": 0.85
+          "Intensity": 0.35,
+          "Size": 18,
+          "Threshold": 1.4
+        }
+      },
+      "DepthOfField": {
+        "$className": "DepthOfFieldEffect",
+        "$properties": {
+          "FarIntensity": 0.15,
+          "FocusDistance": 40,
+          "InFocusRadius": 28,
+          "NearIntensity": 0.05
         }
       }
     },
 
     "SoundService": {
       "$properties": {
-        "AmbientReverb": "City",
+        "AmbientReverb": "ConcertHall",
         "DopplerScale": 1,
         "RespectFilteringEnabled": true
       }
@@ -81,10 +91,10 @@
         "$className": "Part",
         "$properties": {
           "Anchored": true,
-          "Color": [0.12, 0.16, 0.28],
+          "Color": [0.05, 0.06, 0.1],
           "Material": "SmoothPlastic",
           "Position": [0, -0.5, 0],
-          "Size": [200, 1, 200],
+          "Size": [220, 1, 220],
           "TopSurface": "Smooth",
           "BottomSurface": "Smooth"
         }
@@ -95,10 +105,11 @@
           "Anchored": true,
           "Duration": 0,
           "Neutral": true,
-          "Color": [0, 0.85, 1],
-          "Material": "Neon",
-          "Position": [0, 0.5, 0],
-          "Size": [12, 1, 12],
+          "Color": [0.1, 0.35, 0.45],
+          "Material": "SmoothPlastic",
+          "Position": [0, 0.5, 14],
+          "Size": [8, 1, 8],
+          "Transparency": 0.35,
           "TopSurface": "Smooth",
           "BottomSurface": "Smooth"
         }
