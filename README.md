@@ -1,8 +1,8 @@
 # NEON SURGE
 
-A **Roblox roguelite arena shooter** built with **Rojo + Luau only**.
+A **dark cyberpunk roguelite arena shooter** for Roblox — **Rojo + Luau only**.
 
-Survive neon hostiles, level up mid-run, bank credits, and buy permanent power. Designed as a publishable live game with gamepass / developer-product hooks.
+Moody arena, gem XP, level-up protocols, banked credits, and meta loadouts. Tuned for atmosphere first (low lighting, sparse neon accents) — not a light show.
 
 ## Why this loop can monetize
 

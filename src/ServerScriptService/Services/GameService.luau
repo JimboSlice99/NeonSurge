@@ -390,8 +390,9 @@ local function startRun(player: Player)
 			local aura = Instance.new("PointLight")
 			aura.Name = "VipAura"
 			aura.Color = Config.Palette.Gold
-			aura.Brightness = 2.5
-			aura.Range = 16
+			aura.Brightness = 0.6
+			aura.Range = 12
+			aura.Shadows = false
 			aura.Parent = root
 		end
 	end
