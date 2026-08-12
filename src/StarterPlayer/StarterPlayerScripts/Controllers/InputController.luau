@@ -2,7 +2,6 @@
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
@@ -12,80 +11,75 @@ local InputController = {}
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
-local firing = true
-local camera = Workspace.CurrentCamera
+local armed = false
 
-local function aimDirection(): Vector3
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root or not root:IsA("BasePart") or not camera then
-		return Vector3.new(0, 0, -1)
+local function plotFromTarget(target: Instance?): BasePart?
+	if not target then
+		return nil
 	end
-
-	local hit = mouse.Hit
-	if hit then
-		local flat = Vector3.new(hit.Position.X - root.Position.X, 0, hit.Position.Z - root.Position.Z)
-		if flat.Magnitude > 0.2 then
-			return flat.Unit
+	if target:IsA("BasePart") and target.Name == "Plot" then
+		return target
+	end
+	local model = target:FindFirstAncestorOfClass("Model")
+	if model and model.PrimaryPart then
+		-- clicked a tower; find its plot via nearby plots
+		local map = Workspace:FindFirstChild("NeonMap")
+		if map then
+			for _, inst in map:GetChildren() do
+				if inst:IsA("BasePart") and inst.Name == "Plot" then
+					if (inst.Position - model.PrimaryPart.Position).Magnitude < 6 then
+						return inst
+					end
+				end
+			end
 		end
 	end
-
-	return Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z).Unit
+	return nil
 end
 
-local function moveDirection(): Vector3
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid and humanoid.MoveDirection.Magnitude > 0.1 then
-		return Vector3.new(humanoid.MoveDirection.X, 0, humanoid.MoveDirection.Z).Unit
-	end
-	return aimDirection()
-end
-
-local function onDash(_name: string, state: Enum.UserInputState)
-	if state ~= Enum.UserInputState.Begin then
-		return Enum.ContextActionResult.Pass
-	end
-	Remotes.get("RequestDash"):FireServer(moveDirection())
-	return Enum.ContextActionResult.Sink
-end
-
-local function onRestart(_name: string, state: Enum.UserInputState)
-	if state ~= Enum.UserInputState.Begin then
-		return Enum.ContextActionResult.Pass
-	end
-	Remotes.get("RequestRestart"):FireServer()
-	return Enum.ContextActionResult.Sink
+function InputController.setArmed(value: boolean)
+	armed = value
 end
 
 function InputController.start()
-	ContextActionService:BindAction("NeonDash", onDash, true, Enum.KeyCode.Q, Enum.KeyCode.LeftShift, Enum.KeyCode.ButtonL2)
-	ContextActionService:SetTitle("NeonDash", "Dash")
-	ContextActionService:SetPosition("NeonDash", UDim2.fromScale(0.7, 0.35))
-
-	ContextActionService:BindAction("NeonRestart", onRestart, false, Enum.KeyCode.R, Enum.KeyCode.ButtonY)
-
 	UserInputService.InputBegan:Connect(function(input, processed)
-		if processed then
+		if processed or not armed then
 			return
 		end
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			firing = true
+		if input.KeyCode == Enum.KeyCode.One then
+			Remotes.get("RequestSelectBuild"):FireServer("Pulse")
+		elseif input.KeyCode == Enum.KeyCode.Two then
+			Remotes.get("RequestSelectBuild"):FireServer("Beam")
+		elseif input.KeyCode == Enum.KeyCode.Three then
+			Remotes.get("RequestSelectBuild"):FireServer("Frost")
+		elseif input.KeyCode == Enum.KeyCode.Four then
+			Remotes.get("RequestSelectBuild"):FireServer("Nova")
+		elseif input.KeyCode == Enum.KeyCode.R then
+			Remotes.get("RequestRestart"):FireServer()
+		elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+			local plot = plotFromTarget(mouse.Target)
+			if plot then
+				local occupied = plot:GetAttribute("Occupied") == true
+				if occupied then
+					Remotes.get("RequestUpgradeTower"):FireServer(plot:GetAttribute("PlotId"))
+				else
+					Remotes.get("RequestPlaceTower"):FireServer(plot:GetAttribute("PlotId"))
+				end
+			end
+		elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+			local plot = plotFromTarget(mouse.Target)
+			if plot and plot:GetAttribute("Occupied") == true then
+				Remotes.get("RequestSellTower"):FireServer(plot:GetAttribute("PlotId"))
+			end
 		end
 	end)
 
-	-- Auto-fire loop; hold LMB optional, always surging by default
-	RunService.RenderStepped:Connect(function()
-		if not firing then
-			return
+	ContextActionService:BindAction("NeonRestart", function(_n, state)
+		if state == Enum.UserInputState.Begin then
+			Remotes.get("RequestRestart"):FireServer()
 		end
-		local character = player.Character
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if not humanoid or humanoid.Health <= 0 then
-			return
-		end
-		Remotes.get("RequestFire"):FireServer(aimDirection())
-	end)
+		return Enum.ContextActionResult.Sink
+	end, false, Enum.KeyCode.ButtonB)
 end
 
 return InputController

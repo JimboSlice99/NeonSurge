@@ -1,14 +1,12 @@
 --!strict
 
-local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
+local Remotes = require(game:GetService("ReplicatedStorage").Shared.Remotes)
 local Types = require(game:GetService("ReplicatedStorage").Shared.Types)
-local ArenaBuilder = require(script.Parent.ArenaBuilder)
 
 type EnemyKind = Types.EnemyKind
 
@@ -16,10 +14,10 @@ local EnemyService = {}
 
 local folder: Folder? = nil
 local alive: { [Model]: boolean } = {}
-local touchClock: { [Model]: number } = {}
-local onEnemyDied: ((player: Player?, kind: EnemyKind, score: number) -> ())? = nil
-local onPlayerDamaged: ((player: Player, amount: number) -> ())? = nil
-local heartbeatConn: RBXScriptConnection? = nil
+local waypoints: { Vector3 } = {}
+local onLeak: ((number) -> ())? = nil
+local onDeath: ((number, Vector3) -> ())? = nil
+local heartbeat: RBXScriptConnection? = nil
 
 local function enemyFolder(): Folder
 	if folder and folder.Parent then
@@ -37,78 +35,72 @@ local function enemyFolder(): Folder
 	return created
 end
 
-local function getDefinition(kind: EnemyKind)
-	if kind == "Boss" then
-		return Config.Enemies.Boss
-	elseif kind == "Bruiser" then
-		return Config.Enemies.Bruiser
-	end
-	return Config.Enemies.Runner
-end
-
-local function nearestPlayerRoot(from: Vector3): (BasePart?, Player?)
-	local bestDist = math.huge
-	local bestRoot: BasePart? = nil
-	local bestPlayer: Player? = nil
-	for _, player in Players:GetPlayers() do
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-		if root and root:IsA("BasePart") and humanoid and humanoid.Health > 0 then
-			local dist = (root.Position - from).Magnitude
-			if dist < bestDist then
-				bestDist = dist
-				bestRoot = root
-				bestPlayer = player
-			end
-		end
-	end
-	return bestRoot, bestPlayer
-end
-
 function EnemyService.init(hooks: {
-	onEnemyDied: (player: Player?, kind: EnemyKind, score: number) -> (),
-	onPlayerDamaged: (player: Player, amount: number) -> (),
+	onLeak: (number) -> (),
+	onDeath: (reward: number, position: Vector3) -> (),
 })
-	onEnemyDied = hooks.onEnemyDied
-	onPlayerDamaged = hooks.onPlayerDamaged
+	onLeak = hooks.onLeak
+	onDeath = hooks.onDeath
 	enemyFolder()
-
-	if heartbeatConn then
-		heartbeatConn:Disconnect()
+	if heartbeat then
+		heartbeat:Disconnect()
 	end
 
-	heartbeatConn = RunService.Heartbeat:Connect(function()
+	heartbeat = RunService.Heartbeat:Connect(function(dt)
 		for model in pairs(alive) do
 			if not model.Parent then
 				alive[model] = nil
 				continue
 			end
-
 			local root = model.PrimaryPart
 			local humanoid = model:FindFirstChildOfClass("Humanoid")
 			if not root or not humanoid or humanoid.Health <= 0 then
 				continue
 			end
 
-			local target = nearestPlayerRoot(root.Position)
-			if target then
-				local look = Vector3.new(target.Position.X - root.Position.X, 0, target.Position.Z - root.Position.Z)
-				if look.Magnitude > 0.1 then
-					local dir = look.Unit
-					humanoid:Move(dir, false)
-					root.CFrame = CFrame.lookAt(root.Position, root.Position + dir)
-				end
+			local index = tonumber(model:GetAttribute("WP")) or 1
+			local target = waypoints[index]
+			if not target then
+				continue
 			end
 
-			-- Soft keep-in-arena
-			local flat = Vector3.new(root.Position.X, 0, root.Position.Z)
-			if flat.Magnitude > Config.Arena.Radius - 2 then
-				local push = flat.Unit * (Config.Arena.Radius - 4)
-				root.CFrame = CFrame.new(push.X, root.Position.Y, push.Z)
+			local now = os.clock()
+			local slow = tonumber(model:GetAttribute("Slow")) or 0
+			local slowUntil = tonumber(model:GetAttribute("SlowUntil")) or 0
+			if now > slowUntil then
+				slow = 0
+				model:SetAttribute("Slow", 0)
+			end
+
+			local baseSpeed = tonumber(model:GetAttribute("Speed")) or 12
+			local speed = baseSpeed * (1 - math.clamp(slow, 0, 0.8))
+			local pos = root.Position
+			local flatTarget = Vector3.new(target.X, pos.Y, target.Z)
+			local delta = flatTarget - pos
+			local dist = delta.Magnitude
+			if dist < 1.2 then
+				index += 1
+				model:SetAttribute("WP", index)
+				if index > #waypoints then
+					-- leaked to core
+					local lives = tonumber(model:GetAttribute("Leak")) or 1
+					alive[model] = nil
+					model:Destroy()
+					if onLeak then
+						onLeak(lives)
+					end
+				end
+			else
+				local step = math.min(dist, speed * dt)
+				local nextPos = pos + delta.Unit * step
+				root.CFrame = CFrame.lookAt(nextPos, nextPos + delta.Unit)
 			end
 		end
 	end)
+end
+
+function EnemyService.setPath(points: { Vector3 })
+	waypoints = points
 end
 
 function EnemyService.clear()
@@ -116,131 +108,99 @@ function EnemyService.clear()
 		model:Destroy()
 	end
 	table.clear(alive)
-	table.clear(touchClock)
-	local f = enemyFolder()
-	f:ClearAllChildren()
+	enemyFolder():ClearAllChildren()
 end
 
-function EnemyService.count(): number
-	local n = 0
+function EnemyService.list(): { Model }
+	local list = {}
 	for model in pairs(alive) do
 		if model.Parent then
-			n += 1
+			table.insert(list, model)
 		else
 			alive[model] = nil
 		end
 	end
-	return n
+	return list
 end
 
-function EnemyService.spawn(kind: EnemyKind): Model
-	local def = getDefinition(kind)
+function EnemyService.count(): number
+	return #EnemyService.list()
+end
+
+function EnemyService.spawn(kind: EnemyKind, wave: number): Model
+	local def = Config.Enemies[kind]
+	local hpScale = 1 + (wave - 1) * 0.14
 	local model = Instance.new("Model")
-	model.Name = def.Name
+	model.Name = kind
 
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(1, 1, 1)
-	root.Transparency = 1
+	root.Anchored = true
 	root.CanCollide = false
-	root.Anchored = false
-	root.CFrame = ArenaBuilder.randomSpawnCFrame()
+	root.CastShadow = false
+	root.Size = if kind == "Boss" then Vector3.new(4.5, 4.5, 4.5) elseif kind == "Tank" then Vector3.new(3.2, 3.2, 3.2) else Vector3.new(2, 2, 2)
+	root.Color = def.color
+	root.Material = Enum.Material.SmoothPlastic
+	root.Transparency = 0
+	root.Shape = Enum.PartType.Ball
+	root.CFrame = CFrame.new(waypoints[1] or Vector3.new(0, 2, 0))
 	root.Parent = model
 
-	local body = Instance.new("Part")
-	body.Name = "Body"
-	body.Shape = Enum.PartType.Ball
-	body.Size = def.Size
-	body.Color = def.Color
-	body.Material = Enum.Material.Neon
-	body.CanCollide = true
-	body.Massless = false
-	body.CFrame = root.CFrame
-	body.Parent = model
-
-	local weld = Instance.new("WeldConstraint")
-	weld.Part0 = root
-	weld.Part1 = body
-	weld.Parent = root
-
-	local light = Instance.new("PointLight")
-	light.Color = def.Color
-	light.Brightness = if kind == "Boss" then 4 else 2
-	light.Range = if kind == "Boss" then 28 else 14
-	light.Parent = body
+	local shell = Instance.new("Part")
+	shell.Name = "Shell"
+	shell.Anchored = true
+	shell.CanCollide = false
+	shell.Size = root.Size * 1.2
+	shell.Color = Color3.fromRGB(
+		math.floor(def.color.R * 255 * 0.45),
+		math.floor(def.color.G * 255 * 0.45),
+		math.floor(def.color.B * 255 * 0.45)
+	)
+	shell.Material = Enum.Material.Metal
+	shell.Transparency = 0.25
+	shell.Shape = Enum.PartType.Ball
+	shell.CFrame = root.CFrame
+	shell.Parent = model
 
 	local humanoid = Instance.new("Humanoid")
-	humanoid.MaxHealth = def.Health
-	humanoid.Health = def.Health
-	humanoid.WalkSpeed = def.Speed
+	humanoid.MaxHealth = def.health * hpScale
+	humanoid.Health = humanoid.MaxHealth
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.Parent = model
 
 	model.PrimaryPart = root
+	model:SetAttribute("WP", 1)
+	model:SetAttribute("Speed", def.speed)
+	model:SetAttribute("Leak", def.leak)
+	model:SetAttribute("Reward", def.reward + math.floor(wave * 0.5))
 	model:SetAttribute("Kind", kind)
-	model:SetAttribute("Score", def.Score)
-	model:SetAttribute("Damage", def.Damage)
-	model:SetAttribute("TouchCooldown", def.TouchCooldown)
-	CollectionService:AddTag(model, "NeonEnemy")
-
 	model.Parent = enemyFolder()
 	alive[model] = true
 
-	humanoid.Died:Connect(function()
-		alive[model] = nil
-		local killerAttr = model:GetAttribute("LastHitBy")
-		local killer: Player? = nil
-		if typeof(killerAttr) == "number" then
-			killer = Players:GetPlayerByUserId(killerAttr)
+	local sync: RBXScriptConnection
+	sync = RunService.Heartbeat:Connect(function()
+		if not model.Parent or not root.Parent then
+			sync:Disconnect()
+			return
 		end
-		if onEnemyDied then
-			onEnemyDied(killer, kind, def.Score)
-		end
-
-		-- Death burst placeholder part for client FX hook
-		local burst = Instance.new("Part")
-		burst.Name = "DeathBurst"
-		burst.Anchored = true
-		burst.CanCollide = false
-		burst.Transparency = 1
-		burst.Size = Vector3.new(1, 1, 1)
-		burst.CFrame = root.CFrame
-		burst.Parent = Workspace
-		burst:SetAttribute("Color", def.Color:ToHex())
-		Debris:AddItem(burst, 0.5)
-		Debris:AddItem(model, 0.05)
+		shell.CFrame = root.CFrame
 	end)
 
-	body.Touched:Connect(function(hit)
-		local character = hit:FindFirstAncestorOfClass("Model")
-		if not character then
-			return
+	humanoid.Died:Connect(function()
+		alive[model] = nil
+		local reward = tonumber(model:GetAttribute("Reward")) or 0
+		local pos = root.Position
+		if onDeath then
+			onDeath(reward, pos)
 		end
-		local player = Players:GetPlayerFromCharacter(character)
-		local humanoidHit = character:FindFirstChildOfClass("Humanoid")
-		if not player or not humanoidHit or humanoidHit.Health <= 0 then
-			return
-		end
-		if character:GetAttribute("IFrames") == true then
-			return
-		end
-
-		local now = os.clock()
-		local last = touchClock[model] or 0
-		if now - last < def.TouchCooldown then
-			return
-		end
-		touchClock[model] = now
-
-		if onPlayerDamaged then
-			onPlayerDamaged(player, def.Damage)
-		end
+		Remotes.get("FxBurst"):FireAllClients({ kind = "kill", position = pos, color = def.color })
+		Debris:AddItem(model, 0.05)
 	end)
 
 	return model
 end
 
-function EnemyService.applyDamage(model: Model, amount: number, attacker: Player?): boolean
+function EnemyService.damage(model: Model, amount: number, _slow: boolean?): boolean
 	if not alive[model] then
 		return false
 	end
@@ -248,19 +208,8 @@ function EnemyService.applyDamage(model: Model, amount: number, attacker: Player
 	if not humanoid or humanoid.Health <= 0 then
 		return false
 	end
-	if attacker then
-		model:SetAttribute("LastHitBy", attacker.UserId)
-	end
 	humanoid:TakeDamage(amount)
 	return true
-end
-
-function EnemyService.getEnemyFromPart(part: BasePart): Model?
-	local model = part:FindFirstAncestorOfClass("Model")
-	if model and alive[model] and CollectionService:HasTag(model, "NeonEnemy") then
-		return model
-	end
-	return nil
 end
 
 return EnemyService
