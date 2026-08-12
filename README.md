@@ -1,68 +1,60 @@
 # NEON SURGE
 
-A fast neon arena survivor for Roblox — **Rojo + Luau only**.
+A **Roblox roguelite arena shooter** built with **Rojo + Luau only**.
 
-Dash through hostile pulse units, auto-fire surge bolts, chain combos, and clear escalating waves before the grid overloads.
+Survive neon hostiles, level up mid-run, bank credits, and buy permanent power. Designed as a publishable live game with gamepass / developer-product hooks.
 
-## Gameplay
+## Why this loop can monetize
 
-- **Move** with WASD / thumbstick
-- **Auto-fire** locks onto the nearest hostile (mouse aim preferred when available)
-- **Dash** with `Q`, `Left Shift`, or gamepad `L2` (brief i-frames)
-- **Survive waves** of Pulse Runners, Volt Bruisers, and Neon Overlords
-- **Reboot** with `R` after a system failure
+| Hook | What it does |
+|------|----------------|
+| **Short runs** | Instant Play → waves → death in minutes |
+| **In-run upgrades** | Level-up picks (damage, multi-shot, pierce…) |
+| **Meta progression** | Spend banked credits on permanent upgrades |
+| **Gamepasses** | 2x Credits, VIP Trail, Extra Dash (IDs in Config) |
+| **Dev products** | Credit packs for impulse spends |
+| **High score** | Retention + bonus credits on PB |
 
-## Project layout
+No pay-to-win wall: gamepasses accelerate / cosmetics; skill still clears waves.
 
-```
-default.project.json          Rojo place mapping
-aftman.toml                   Toolchain pins (Rojo, Selene, StyLua)
-src/
-  ReplicatedStorage/Shared/   Config, remotes, types
-  ServerScriptService/        Arena, waves, combat, enemies
-  StarterPlayer/
-    StarterPlayerScripts/     Input, HUD, VFX
-```
+## Controls
 
-## Setup
+- **WASD** move · **auto-fire** · **Q / Shift** dash  
+- **Level up** → pick 1 of 3 upgrades  
+- **R** returns to lobby after a run  
+- Lobby **PLAY RUN** / upgrade shop / gamepass buttons
 
-1. Install [Aftman](https://github.com/LPGhatguy/aftman), then from this repo:
-
-   ```bash
-   aftman install
-   ```
-
-2. Install the [Rojo](https://rojo.space/) plugin in Roblox Studio.
-
-3. Serve the project:
-
-   ```bash
-   rojo serve
-   ```
-
-4. In Studio, open a new Baseplace → **Plugins → Rojo → Connect**.
-
-5. Press Play. The neon arena builds itself and the first surge begins automatically.
-
-### One-shot place file
+## Setup (Studio)
 
 ```bash
+aftman install
 rojo build -o NeonSurge.rbxlx
 ```
 
-Open `NeonSurge.rbxlx` in Studio if you prefer not to live-sync.
+Open `NeonSurge.rbxlx` in Roblox Studio → Play.
+
+Or live sync: `rojo serve` + Rojo plugin **7.7.0**.
+
+## Publish checklist (money)
+
+1. Upload the place to a Roblox experience you own  
+2. Create gamepasses + developer products in Creator Dashboard  
+3. Paste IDs into `src/ReplicatedStorage/Shared/Config.luau` → `Monetization`  
+4. Enable **Studio Access to API Services** for DataStore tests  
+5. Soft launch, watch session time / pass conversion, patch weekly
+
+## Layout
+
+```
+src/ReplicatedStorage/Shared/   Config, upgrades, remotes, types
+src/ServerScriptService/        Arena, combat, waves, data, monetization
+src/StarterPlayer/...           Lobby, HUD, upgrade picker, input, FX
+```
 
 ## Tooling
 
 ```bash
+aftman install
 selene src
-stylua src
+rojo build -o NeonSurge.rbxlx
 ```
-
-## Architecture notes
-
-- Server owns waves, damage, scoring, projectiles, and enemy AI
-- Client owns input, HUD, and juice (bursts / shake / hurt flash)
-- Tunables live in `src/ReplicatedStorage/Shared/Config.luau`
-
-No TypeScript, React, or web scaffold — this repository is a Roblox game.

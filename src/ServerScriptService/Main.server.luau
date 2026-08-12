@@ -4,4 +4,4 @@
 local GameService = require(script.Parent.Services.GameService)
 
 GameService.start()
-print("[NeonSurge] Server online — arena live")
+print("[NeonSurge] Server online — earn credits, buy power, surf the meta")

@@ -12,123 +12,122 @@ local Hud = {}
 
 local player = Players.LocalPlayer
 local gui: ScreenGui
-local titleLabel: TextLabel
-local messageLabel: TextLabel
-local waveLabel: TextLabel
-local scoreLabel: TextLabel
-local comboLabel: TextLabel
-local healthFill: Frame
-local killsLabel: TextLabel
-local enemiesLabel: TextLabel
+local title: TextLabel
+local message: TextLabel
+local wave: TextLabel
+local score: TextLabel
+local level: TextLabel
+local credits: TextLabel
+local combo: TextLabel
+local xpFill: Frame
+local hpFill: Frame
 
-local function makeLabel(parent: Instance, name: string, size: UDim2, position: UDim2, textSize: number): TextLabel
-	local label = Instance.new("TextLabel")
-	label.Name = name
-	label.BackgroundTransparency = 1
-	label.Size = size
-	label.Position = position
-	label.Font = Enum.Font.GothamBlack
-	label.TextSize = textSize
-	label.TextColor3 = Color3.new(1, 1, 1)
-	label.TextStrokeTransparency = 0.4
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.TextYAlignment = Enum.TextYAlignment.Center
-	label.Text = ""
-	label.Parent = parent
-	return label
+local function label(parent: Instance, name: string, size: UDim2, pos: UDim2, textSize: number): TextLabel
+	local l = Instance.new("TextLabel")
+	l.Name = name
+	l.BackgroundTransparency = 1
+	l.Size = size
+	l.Position = pos
+	l.Font = Enum.Font.GothamBlack
+	l.TextSize = textSize
+	l.TextColor3 = Color3.new(1, 1, 1)
+	l.TextStrokeTransparency = 0.35
+	l.TextXAlignment = Enum.TextXAlignment.Left
+	l.Text = ""
+	l.Parent = parent
+	return l
+end
+
+local function bar(parent: Instance, name: string, pos: UDim2, color: Color3): Frame
+	local bg = Instance.new("Frame")
+	bg.Name = name
+	bg.Size = UDim2.fromOffset(280, 16)
+	bg.Position = pos
+	bg.BackgroundColor3 = Color3.fromRGB(10, 14, 28)
+	bg.BorderSizePixel = 0
+	bg.Parent = parent
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = color
+	stroke.Thickness = 1.4
+	stroke.Transparency = 0.3
+	stroke.Parent = bg
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(1, 1)
+	fill.BackgroundColor3 = color
+	fill.BorderSizePixel = 0
+	fill.Parent = bg
+	return fill
 end
 
 function Hud.mount()
-	local playerGui = player:WaitForChild("PlayerGui")
-
-	local existing = playerGui:FindFirstChild("NeonSurgeHud")
-	if existing then
-		existing:Destroy()
+	local pg = player:WaitForChild("PlayerGui")
+	local old = pg:FindFirstChild("NeonSurgeHud")
+	if old then
+		old:Destroy()
 	end
 
 	gui = Instance.new("ScreenGui")
 	gui.Name = "NeonSurgeHud"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
-	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.Parent = playerGui
+	gui.Parent = pg
 
-	titleLabel = makeLabel(gui, "Title", UDim2.fromOffset(420, 42), UDim2.new(0, 28, 0, 24), 30)
-	titleLabel.Text = Config.GameName
-	titleLabel.TextColor3 = Config.Palette.Cyan
+	title = label(gui, "Title", UDim2.fromOffset(420, 40), UDim2.new(0, 24, 0, 20), 28)
+	title.Text = Config.GameName
+	title.TextColor3 = Config.Palette.Cyan
 
-	messageLabel = makeLabel(gui, "Message", UDim2.new(1, -56, 0, 36), UDim2.new(0, 28, 0, 66), 22)
-	messageLabel.TextColor3 = Config.Palette.Magenta
-	messageLabel.Text = Config.Tagline
+	message = label(gui, "Message", UDim2.new(1, -48, 0, 30), UDim2.new(0, 24, 0, 58), 20)
+	message.TextColor3 = Config.Palette.Magenta
 
-	waveLabel = makeLabel(gui, "Wave", UDim2.fromOffset(220, 28), UDim2.new(0, 28, 0, 112), 20)
-	scoreLabel = makeLabel(gui, "Score", UDim2.fromOffset(260, 28), UDim2.new(0, 28, 0, 140), 20)
-	comboLabel = makeLabel(gui, "Combo", UDim2.fromOffset(220, 28), UDim2.new(0, 28, 0, 168), 20)
-	comboLabel.TextColor3 = Config.Palette.Lime
-	killsLabel = makeLabel(gui, "Kills", UDim2.fromOffset(220, 28), UDim2.new(0, 28, 0, 196), 18)
-	enemiesLabel = makeLabel(gui, "Enemies", UDim2.fromOffset(220, 28), UDim2.new(0, 28, 0, 220), 18)
+	wave = label(gui, "Wave", UDim2.fromOffset(220, 24), UDim2.new(0, 24, 0, 100), 18)
+	score = label(gui, "Score", UDim2.fromOffset(260, 24), UDim2.new(0, 24, 0, 124), 18)
+	level = label(gui, "Level", UDim2.fromOffset(260, 24), UDim2.new(0, 24, 0, 148), 18)
+	credits = label(gui, "Credits", UDim2.fromOffset(280, 24), UDim2.new(0, 24, 0, 172), 18)
+	credits.TextColor3 = Config.Palette.Gold
+	combo = label(gui, "Combo", UDim2.fromOffset(220, 24), UDim2.new(0, 24, 0, 196), 18)
+	combo.TextColor3 = Config.Palette.Lime
 
-	local healthFrame = Instance.new("Frame")
-	healthFrame.Name = "HealthFrame"
-	healthFrame.Size = UDim2.fromOffset(280, 18)
-	healthFrame.Position = UDim2.new(0, 28, 1, -48)
-	healthFrame.BackgroundColor3 = Color3.fromRGB(12, 16, 32)
-	healthFrame.BorderSizePixel = 0
-	healthFrame.Parent = gui
+	hpFill = bar(gui, "Health", UDim2.new(0, 24, 1, -52), Config.Palette.Cyan)
+	xpFill = bar(gui, "XP", UDim2.new(0, 24, 1, -28), Config.Palette.Violet)
 
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Config.Palette.Cyan
-	stroke.Thickness = 1.5
-	stroke.Transparency = 0.25
-	stroke.Parent = healthFrame
-
-	healthFill = Instance.new("Frame")
-	healthFill.Name = "Fill"
-	healthFill.Size = UDim2.fromScale(1, 1)
-	healthFill.BackgroundColor3 = Config.Palette.Cyan
-	healthFill.BorderSizePixel = 0
-	healthFill.Parent = healthFrame
-
-	local hint = makeLabel(gui, "Hint", UDim2.fromOffset(420, 24), UDim2.new(1, -448, 1, -48), 16)
+	local hint = label(gui, "Hint", UDim2.fromOffset(460, 22), UDim2.new(1, -484, 1, -48), 15)
 	hint.TextXAlignment = Enum.TextXAlignment.Right
-	hint.Text = "Q / Shift dash · R reboot · auto-fire on"
-	hint.TextTransparency = 0.15
+	hint.Text = "Q dash · auto-fire · level up = power"
+end
+
+function Hud.setVisible(visible: boolean)
+	if gui then
+		gui.Enabled = visible
+	end
 end
 
 function Hud.apply(snapshot: HudSnapshot)
 	if not gui then
 		return
 	end
+	wave.Text = ("WAVE %d"):format(snapshot.wave)
+	score.Text = ("SCORE  %d"):format(snapshot.score)
+	level.Text = ("LVL %d"):format(snapshot.level)
+	credits.Text = ("RUN %d   BANK %d"):format(snapshot.creditsRun, snapshot.creditsBank)
+	combo.Text = if snapshot.combo > 1 then ("COMBO x%d"):format(snapshot.combo) else ""
 
-	waveLabel.Text = ("WAVE %d"):format(snapshot.wave)
-	scoreLabel.Text = ("SCORE  %d"):format(snapshot.score)
-	comboLabel.Text = if snapshot.combo > 1 then ("COMBO  x%d"):format(snapshot.combo) else ""
-	killsLabel.Text = ("KILLS  %d"):format(snapshot.kills)
-	enemiesLabel.Text = ("HOSTILES  %d"):format(snapshot.enemiesAlive)
-
-	local ratio = 0
-	if snapshot.maxHealth > 0 then
-		ratio = math.clamp(snapshot.health / snapshot.maxHealth, 0, 1)
-	end
-	TweenService:Create(healthFill, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
-		Size = UDim2.fromScale(ratio, 1),
-		BackgroundColor3 = if ratio < 0.3 then Config.Palette.Magenta else Config.Palette.Cyan,
+	local hp = if snapshot.maxHealth > 0 then snapshot.health / snapshot.maxHealth else 0
+	local xp = if snapshot.xpNeed > 0 then snapshot.xp / snapshot.xpNeed else 0
+	TweenService:Create(hpFill, TweenInfo.new(0.12), {
+		Size = UDim2.fromScale(math.clamp(hp, 0, 1), 1),
+		BackgroundColor3 = if hp < 0.3 then Config.Palette.Danger else Config.Palette.Cyan,
+	}):Play()
+	TweenService:Create(xpFill, TweenInfo.new(0.12), {
+		Size = UDim2.fromScale(math.clamp(xp, 0, 1), 1),
 	}):Play()
 
 	local msg = snapshot.message
 	if snapshot.countdown and snapshot.countdown > 0 then
-		msg = ("%s  %d"):format(snapshot.message or "SURGE", snapshot.countdown)
+		msg = ("%s  %d"):format(snapshot.message or "GO", snapshot.countdown)
 	end
 	if msg and msg ~= "" then
-		messageLabel.Text = msg
-		messageLabel.TextTransparency = 0
-		TweenService:Create(messageLabel, TweenInfo.new(0.8), { TextTransparency = 0.15 }):Play()
-	end
-
-	if snapshot.phase == "GameOver" then
-		titleLabel.TextColor3 = Config.Palette.Magenta
-	else
-		titleLabel.TextColor3 = Config.Palette.Cyan
+		message.Text = msg
 	end
 end
 
