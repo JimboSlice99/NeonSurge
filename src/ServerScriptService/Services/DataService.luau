@@ -35,15 +35,35 @@ local function emptyPlotsForZones(unlocked: { [string]: boolean }): { [string]: 
 end
 
 function DataService.DefaultData(): PlayerData
-	local unlocked = { Starter = true, Meadow = false, Greenhouse = false }
+	local unlocked = {
+		Homestead = true,
+		Riverbend = false,
+		Orchard = false,
+		SkyTerrace = false,
+	}
 	return {
 		coins = Config.StartingCoins,
-		ownedSeeds = { Wheat = 10, Carrot = 0, Berry = 0, Melon = 0, Crystal = 0 },
-		ownedTools = { Basic = true, IronSpade = false, GoldShears = false },
+		ownedSeeds = {
+			Wheat = Config.StartingWheat,
+			Carrot = 0,
+			Tomato = 0,
+			Berry = 0,
+			Corn = 0,
+			Melon = 0,
+			Moonbloom = 0,
+			Crystal = 0,
+		},
+		ownedTools = {
+			Basic = true,
+			IronSpade = false,
+			GoldShears = false,
+			DiamondScythe = false,
+		},
 		equippedTool = "Basic",
 		unlockedZones = unlocked,
 		plots = emptyPlotsForZones(unlocked),
 		ownedPasses = { VIP = false, DoubleSpeed = false, AutoCollect = false },
+		rebirths = 0,
 		stats = { planted = 0, harvested = 0, earned = 0 },
 	}
 end
@@ -72,7 +92,7 @@ function DataService.Start()
 
 	task.spawn(function()
 		while true do
-			task.wait(45)
+			task.wait(40)
 			for _, player in Players:GetPlayers() do
 				DataService.Save(player)
 			end
@@ -88,6 +108,7 @@ function DataService.Load(player: Player): PlayerData
 		end)
 		if ok and typeof(result) == "table" then
 			data.coins = math.max(0, math.floor(tonumber(result.coins) or data.coins))
+			data.rebirths = math.max(0, math.floor(tonumber(result.rebirths) or 0))
 			if typeof(result.ownedSeeds) == "table" then
 				for seedId, count in result.ownedSeeds do
 					if typeof(seedId) == "string" and typeof(count) == "number" then
@@ -108,12 +129,16 @@ function DataService.Load(player: Player): PlayerData
 			end
 			if typeof(result.unlockedZones) == "table" then
 				for zoneId, unlocked in result.unlockedZones do
-					if typeof(zoneId) == "string" then
+					if typeof(zoneId) == "string" and Config.Zones[zoneId] then
 						data.unlockedZones[zoneId] = unlocked == true
 					end
 				end
 			end
-			data.unlockedZones.Starter = true
+			-- migrate old Starter zone name if present
+			if typeof(result.unlockedZones) == "table" and result.unlockedZones.Starter == true then
+				data.unlockedZones.Homestead = true
+			end
+			data.unlockedZones.Homestead = true
 			if typeof(result.ownedPasses) == "table" then
 				for passKey, owned in result.ownedPasses do
 					if typeof(passKey) == "string" then
@@ -127,7 +152,6 @@ function DataService.Load(player: Player): PlayerData
 				data.stats.earned = math.floor(tonumber(result.stats.earned) or 0)
 			end
 
-			-- Rebuild plots for unlocked zones, restore crops
 			data.plots = emptyPlotsForZones(data.unlockedZones)
 			if typeof(result.plots) == "table" then
 				for key, saved in result.plots do
@@ -210,6 +234,14 @@ end
 
 function DataService.PlotKey(zoneId: string, plotIndex: number): string
 	return plotKey(zoneId, plotIndex)
+end
+
+function DataService.RebirthCost(rebirths: number): number
+	return math.floor(Config.Rebirth.baseCost * (Config.Rebirth.costGrowth ^ rebirths))
+end
+
+function DataService.CoinMultiplier(data: PlayerData): number
+	return 1 + data.rebirths * Config.Rebirth.coinBonusPerRebirth
 end
 
 return DataService

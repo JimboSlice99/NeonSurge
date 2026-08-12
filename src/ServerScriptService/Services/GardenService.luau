@@ -52,6 +52,31 @@ local function growSpeed(player: Player): number
 	return speed
 end
 
+local function goalText(data: Types.PlayerData): string
+	for _, goal in Config.Goals do
+		if goal.check == "harvested" and data.stats.harvested < (goal.need or 1) then
+			return goal.text
+		elseif goal.check == "ownSeed" and goal.seedId then
+			if (data.ownedSeeds[goal.seedId] or 0) < (goal.need or 1) then
+				return goal.text
+			end
+		elseif goal.check == "zone" and goal.zoneId then
+			if not data.unlockedZones[goal.zoneId] then
+				return goal.text
+			end
+		elseif goal.check == "tool" then
+			if data.equippedTool == "Basic" then
+				return goal.text
+			end
+		elseif goal.check == "rebirth" then
+			if data.rebirths < (goal.need or 1) then
+				return goal.text
+			end
+		end
+	end
+	return "Keep expanding — unlock every zone & rebirth for power"
+end
+
 local function pushHud(player: Player)
 	local data = DataService.Get(player)
 	if not data then
@@ -66,6 +91,10 @@ local function pushHud(player: Player)
 		equippedTool = data.equippedTool,
 		selectedSeed = selectedSeed[player] or "Wheat",
 		ownedPasses = data.ownedPasses,
+		rebirths = data.rebirths,
+		rebirthCost = DataService.RebirthCost(data.rebirths),
+		coinMult = DataService.CoinMultiplier(data),
+		goalText = goalText(data),
 		stats = data.stats,
 	} :: Types.HudPayload)
 end
@@ -76,8 +105,7 @@ end
 
 local function setPlantVisual(plot: Types.PlotRuntime, seedId: string?, progress: number, ready: boolean)
 	MapBuilder.SetPlantVisual(plot.model, seedId, progress, ready)
-	local base = plot.base
-	local prompt = base:FindFirstChild("Prompt")
+	local prompt = plot.base:FindFirstChild("Prompt")
 	if prompt and prompt:IsA("ProximityPrompt") then
 		if not seedId then
 			prompt.ActionText = "Plant"
@@ -85,7 +113,7 @@ local function setPlantVisual(plot: Types.PlotRuntime, seedId: string?, progress
 			prompt.Enabled = true
 		elseif ready then
 			prompt.ActionText = "Harvest"
-			prompt.ObjectText = seedId
+			prompt.ObjectText = seedId .. " READY"
 			prompt.Enabled = true
 		else
 			prompt.ActionText = "Growing..."
@@ -105,15 +133,21 @@ local function syncPlotFromData(player: Player, plotId: string)
 	local unlocked = data.unlockedZones[runtime.zoneId] == true
 	for _, desc in runtime.model:GetDescendants() do
 		if desc:IsA("BasePart") then
-			desc.Transparency = if unlocked then (if desc.Name == "Base" then 0 else desc.Transparency) else 1
-			if desc.Name == "Base" then
-				desc.CanCollide = unlocked
+			if not unlocked then
+				desc.LocalTransparencyModifier = 0
+				desc.Transparency = 1
+				desc.CanCollide = false
+			elseif desc.Name == "Base" or desc.Name == "Bed" then
+				desc.Transparency = 0
+				desc.CanCollide = true
+			end
+		elseif desc:IsA("ProximityPrompt") then
+			desc.Enabled = unlocked
+		elseif desc:IsA("BillboardGui") and desc.Name == "ReadyMarker" then
+			if not unlocked then
+				desc.Enabled = false
 			end
 		end
-	end
-	local prompt = runtime.base:FindFirstChild("Prompt")
-	if prompt and prompt:IsA("ProximityPrompt") then
-		prompt.Enabled = unlocked
 	end
 
 	local saved = data.plots[plotId]
@@ -150,7 +184,6 @@ local function bindPlot(player: Player, plotModel: Model)
 	if typeof(plotId) ~= "string" then
 		return
 	end
-
 	local base = plotModel:FindFirstChild("Base")
 	if not base or not base:IsA("BasePart") then
 		return
@@ -165,7 +198,6 @@ local function bindPlot(player: Player, plotModel: Model)
 		plantedAt = 0,
 		readyAt = 0,
 	}
-
 	plotsByPlayer[player] = plotsByPlayer[player] or {}
 	plotsByPlayer[player][plotId] = runtime
 
@@ -178,7 +210,6 @@ local function bindPlot(player: Player, plotModel: Model)
 			GardenService.InteractPlot(player, plotId)
 		end)
 	end
-
 	syncPlotFromData(player, plotId)
 end
 
@@ -187,16 +218,16 @@ function GardenService.SetupPlayer(player: Player)
 	autoAccum[player] = 0
 	lastVisual[player] = {}
 
-	local folder = MapBuilder.EnsurePlayerPlots(player)
+	local data = DataService.Get(player)
+	local folder = MapBuilder.EnsurePlayerPlots(player, if data then data.unlockedZones else nil)
 	for _, child in folder:GetChildren() do
 		if child:IsA("Model") then
 			bindPlot(player, child)
 		end
 	end
 
-	local data = DataService.Get(player)
 	if data then
-		MapBuilder.UpdateZoneLocks(data.unlockedZones)
+		MapBuilder.UpdateZoneLocks(player, data.unlockedZones)
 	end
 	pushHud(player)
 end
@@ -211,10 +242,7 @@ end
 
 function GardenService.SetSelectedSeed(player: Player, seedId: string)
 	local data = DataService.Get(player)
-	if not data then
-		return
-	end
-	if not Config.Seeds[seedId] then
+	if not data or not Config.Seeds[seedId] then
 		return
 	end
 	if (data.ownedSeeds[seedId] or 0) <= 0 then
@@ -230,11 +258,9 @@ function GardenService.InteractPlot(player: Player, plotId: string)
 	if not data or not runtime then
 		return
 	end
-
 	if not data.unlockedZones[runtime.zoneId] then
 		return
 	end
-
 	local saved = data.plots[plotId]
 	if not saved then
 		return
@@ -246,16 +272,16 @@ function GardenService.InteractPlot(player: Player, plotId: string)
 			return
 		end
 		local duration = seed.growTime / growSpeed(player)
-		local readyAt = saved.plantedAt + duration
-		if now() < readyAt then
+		if now() < saved.plantedAt + duration then
 			return
 		end
 
 		local _, toolCoin = toolStats(player)
-		local payout = math.floor(seed.sellValue * toolCoin * vipMult(player))
+		local payout = math.floor(seed.sellValue * toolCoin * vipMult(player) * DataService.CoinMultiplier(data))
 		DataService.AddCoins(player, payout)
 		data.stats.harvested += 1
 		data.stats.earned += payout
+		local color = seed.color
 		saved.seedId = nil
 		saved.plantedAt = 0
 		runtime.seedId = nil
@@ -263,13 +289,19 @@ function GardenService.InteractPlot(player: Player, plotId: string)
 		runtime.readyAt = 0
 		setPlantVisual(runtime, nil, 0, false)
 		DataService.MarkDirty(player)
+		Remotes.Get().HarvestFx:FireClient(player, {
+			plotId = plotId,
+			amount = payout,
+			position = runtime.base.Position,
+			color = color,
+		} :: Types.HarvestFxPayload)
 		pushHud(player)
 		return
 	end
 
 	local seedId = selectedSeed[player] or "Wheat"
 	if (data.ownedSeeds[seedId] or 0) <= 0 then
-		Remotes.Get().Notify:FireClient(player, "err", "No " .. seedId .. " seeds — buy more in the shop")
+		Remotes.Get().Notify:FireClient(player, "err", "Out of " .. seedId .. " seeds — open Shop")
 		return
 	end
 	local seed = Config.Seeds[seedId]
@@ -295,12 +327,10 @@ function GardenService.BuyShopItem(player: Player, itemId: string): (boolean, st
 	if not data then
 		return false, "No data"
 	end
-
 	local item = Config.ShopItems[itemId]
 	if not item then
 		return false, "Unknown item"
 	end
-
 	if data.coins < item.price then
 		return false, "Not enough coins"
 	end
@@ -335,15 +365,47 @@ function GardenService.BuyShopItem(player: Player, itemId: string): (boolean, st
 		end
 		data.unlockedZones[item.zoneId] = true
 		DataService.EnsureZonePlots(player, item.zoneId)
-		MapBuilder.UpdateZoneLocks(data.unlockedZones)
+		MapBuilder.UpdateZoneLocks(player, data.unlockedZones)
 		for plotId in data.plots do
 			syncPlotFromData(player, plotId)
 		end
 		pushHud(player)
 		return true, "Unlocked " .. item.label
 	end
-
 	return false, "Invalid item"
+end
+
+function GardenService.TryRebirth(player: Player): (boolean, string)
+	local data = DataService.Get(player)
+	if not data then
+		return false, "No data"
+	end
+	local cost = DataService.RebirthCost(data.rebirths)
+	if data.coins < cost then
+		return false, "Need " .. tostring(cost) .. " coins to rebirth"
+	end
+
+	data.coins = 0
+	data.rebirths += 1
+	data.ownedSeeds = {
+		Wheat = Config.StartingWheat + data.rebirths * 4,
+		Carrot = 2,
+		Tomato = 0,
+		Berry = 0,
+		Corn = 0,
+		Melon = 0,
+		Moonbloom = 0,
+		Crystal = 0,
+	}
+	-- Keep tools and zones as prestige reward (feels better / charts better)
+	for _, plot in data.plots do
+		plot.seedId = nil
+		plot.plantedAt = 0
+	end
+	DataService.MarkDirty(player)
+	GardenService.RecalcGrowth(player)
+	pushHud(player)
+	return true, "Rebirth #" .. tostring(data.rebirths) .. "! +" .. tostring(math.floor(Config.Rebirth.coinBonusPerRebirth * 100)) .. "% coins forever"
 end
 
 function GardenService.GrantSeedPack(player: Player)
@@ -363,11 +425,11 @@ function GardenService.UnlockNextZone(player: Player)
 	if not data then
 		return
 	end
-	for _, zoneId in { "Meadow", "Greenhouse" } do
+	for _, zoneId in Config.ZoneOrder do
 		if not data.unlockedZones[zoneId] then
 			data.unlockedZones[zoneId] = true
 			DataService.EnsureZonePlots(player, zoneId)
-			MapBuilder.UpdateZoneLocks(data.unlockedZones)
+			MapBuilder.UpdateZoneLocks(player, data.unlockedZones)
 			for plotId in data.plots do
 				syncPlotFromData(player, plotId)
 			end
@@ -392,10 +454,9 @@ function GardenService.Start()
 	local remotes = Remotes.Get()
 
 	remotes.SelectSeed.OnServerEvent:Connect(function(player: Player, seedId: unknown)
-		if typeof(seedId) ~= "string" then
-			return
+		if typeof(seedId) == "string" then
+			GardenService.SetSelectedSeed(player, seedId)
 		end
-		GardenService.SetSelectedSeed(player, seedId)
 	end)
 
 	remotes.BuyShopItem.OnServerEvent:Connect(function(player: Player, itemId: unknown)
@@ -406,6 +467,11 @@ function GardenService.Start()
 		remotes.Notify:FireClient(player, if ok then "ok" else "err", msg)
 	end)
 
+	remotes.RequestRebirth.OnServerEvent:Connect(function(player: Player)
+		local ok, msg = GardenService.TryRebirth(player)
+		remotes.Notify:FireClient(player, if ok then "ok" else "err", msg)
+	end)
+
 	remotes.RequestHud.OnServerEvent:Connect(function(player: Player)
 		pushHud(player)
 	end)
@@ -413,7 +479,7 @@ function GardenService.Start()
 	local accum = 0
 	RunService.Heartbeat:Connect(function(dt)
 		accum += dt
-		if accum < 0.35 then
+		if accum < 0.3 then
 			return
 		end
 		accum = 0
@@ -423,7 +489,6 @@ function GardenService.Start()
 			if not data then
 				continue
 			end
-
 			local speed = growSpeed(player)
 			local visuals = lastVisual[player]
 			if not visuals then
@@ -439,7 +504,7 @@ function GardenService.Start()
 						local duration = seed.growTime / speed
 						local progress = math.clamp((now() - saved.plantedAt) / duration, 0, 1)
 						local ready = progress >= 1
-						local bucket = math.floor(progress * 10)
+						local bucket = math.floor(progress * 12)
 						if ready or visuals[plotId] ~= bucket then
 							visuals[plotId] = bucket
 							setPlantVisual(runtime, saved.seedId, progress, ready)
@@ -449,18 +514,15 @@ function GardenService.Start()
 			end
 
 			if data.ownedPasses.AutoCollect then
-				autoAccum[player] = (autoAccum[player] or 0) + 0.35
+				autoAccum[player] = (autoAccum[player] or 0) + 0.3
 				if (autoAccum[player] or 0) >= Config.PassEffects.AutoCollect.interval then
 					autoAccum[player] = 0
-					for plotId, _runtime in plots do
+					for plotId, _ in plots do
 						local saved = data.plots[plotId]
 						if saved and saved.seedId then
 							local seed = Config.Seeds[saved.seedId]
-							if seed then
-								local duration = seed.growTime / speed
-								if now() >= saved.plantedAt + duration then
-									GardenService.InteractPlot(player, plotId)
-								end
+							if seed and now() >= saved.plantedAt + seed.growTime / speed then
+								GardenService.InteractPlot(player, plotId)
 							end
 						end
 					end

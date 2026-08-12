@@ -1,158 +1,74 @@
 # SURGE GARDEN
 
-A publish-ready Roblox **grow / idle garden simulator** with tycoon-style progression and a Robux shop.
+A full-size Roblox **grow / idle farm simulator** built to feel publish-ready and chart-competitive.
 
-**Loop:** plant → grow → harvest → sell → upgrade → unlock zones.
+**Loop:** plant → grow → harvest → upgrade → unlock zones → rebirth.
 
-Built with **Luau + Rojo**. One currency (Coins). Clear progression. Server-authoritative purchases.
+Built with **Luau + Rojo**. Server-authoritative economy + Robux shop.
 
-## Gameplay
+## What you get
 
-1. Walk up to a dirt plot and use the **ProximityPrompt** to plant your selected seed.
-2. Wait for the crop to grow (watch the plant get taller).
-3. Harvest when ready — coins are granted automatically (sell-on-harvest).
-4. Open **Shop** to buy seed packs, better tools, and new zones.
-5. Unlock **Sunny Meadow** then **Glass Greenhouse** for more plots.
-6. Optional Robux: VIP, 2x grow speed, auto-collect, coin packs, rare seeds, zone skip.
+- Personal farm island (plaza, fountain, market, roads, river, trees, lanterns)
+- **4 zones** · up to **56 plots** (Homestead → Riverbend → Crystal Orchard → Sky Terrace)
+- **8 crops** from Wheat to Legendary Crystal Bloom
+- Tools through Diamond Scythe
+- Guided goals + rebirth prestige (+35% coins each)
+- Mobile-friendly HUD / tabbed shop
+- DataStore saves + MarketplaceService monetization (placeholder IDs)
 
-### Controls
+## Play loop (60 seconds)
 
-| Action | Input |
-|--------|--------|
-| Move | WASD / thumbstick |
-| Plant / Harvest | ProximityPrompt on plot (mobile + desktop) |
-| Select seed | Bottom seed bar |
-| Shop | Top-right **Shop** button |
+1. Spawn in the market plaza → walk through the arch.
+2. Use a plot prompt to **Plant** (seed bar at bottom).
+3. Watch crops grow → **Harvest** for coins (floating +coins).
+4. Open **SHOP** → buy seeds, tools, next zone.
+5. When rich enough, **Rebirth** for permanent coin multiplier.
 
-## Project layout
+## Setup
 
-```
-default.project.json
-aftman.toml
-src/
-  ReplicatedStorage/Shared/
-    Config.luau          seeds, tools, zones, shop, monetization IDs
-    Remotes.luau
-    Types.luau
-  ServerScriptService/
-    Main.server.luau
-    Services/
-      DataService.luau         DataStore save/load
-      MapBuilder.luau          map + plots
-      GardenService.luau       plant/grow/harvest/shop
-      MonetizationService.luau Game Passes + Dev Products
-  StarterPlayer/StarterPlayerScripts/
-    Main.client.luau
-    Client/Hud.luau
-    Client/ShopUi.luau
-```
-
-## Setup (Studio)
-
-### 1. Install tools
-
-```bash
+```powershell
+git checkout cursor/grow-garden-simulator-3712
+git pull
 aftman install
-```
-
-Windows tip: install the Aftman **release** zip, run `.\aftman.exe self-install`, then open a new terminal.
-
-### 2. Build a place file (recommended)
-
-```bash
 rojo build -o SurgeGarden.rbxlx
 ```
 
-Open `SurgeGarden.rbxlx` in Roblox Studio (**fully close** Studio before rebuilding/reopening).
+Fully close Studio → open `SurgeGarden.rbxlx` → Play.
 
-Optional live sync:
+Enable **Game Settings → Security → API Services** for DataStores.
 
-```bash
-rojo serve
-```
-
-Then in Studio: **Plugins → Rojo → Connect** (Rojo plugin version should match CLI; this repo pins `7.4.4`).
-
-### 3. Enable DataStores
-
-In Studio: **Home → Game Settings → Security → Enable Studio Access to API Services**.
-
-Publish the place at least once so DataStores and monetization can be configured.
-
-## Create Game Passes & Developer Products
-
-1. Publish the experience (File → Publish to Roblox).
-2. Open [Creator Dashboard](https://create.roblox.com/) → your experience → **Monetization**.
-3. Create **Game Passes**:
-   - VIP
-   - 2x Grow Speed
-   - Auto Collect
-4. Create **Developer Products**:
-   - Small Coin Pack (hint: 2500 coins)
-   - Big Coin Pack (hint: 15000 coins)
-   - Rare Seed Pack
-   - Zone Skip
-5. Copy each numeric ID.
-
-## Where to paste IDs
+## Monetization IDs
 
 Edit `src/ReplicatedStorage/Shared/Config.luau`:
 
 ```lua
-Monetization = {
-  GamePassIds = {
-    VIP = 0,          -- paste Game Pass ID
-    DoubleSpeed = 0,  -- paste Game Pass ID
-    AutoCollect = 0,  -- paste Game Pass ID
-  },
-  DevProductIds = {
-    CoinsSmall = 0,     -- paste Dev Product ID
-    CoinsBig = 0,       -- paste Dev Product ID
-    RareSeedPack = 0,   -- paste Dev Product ID
-    ZoneSkip = 0,       -- paste Dev Product ID
-  },
+GamePassIds = {
+  VIP = 0,           -- +50% harvest coins
+  DoubleSpeed = 0,   -- 2x grow speed
+  AutoCollect = 0,   -- auto-harvest
+},
+DevProductIds = {
+  CoinsSmall = 0,    -- +5,000 coins
+  CoinsBig = 0,      -- +35,000 coins
+  RareSeedPack = 0,  -- rare seed crate
+  ZoneSkip = 0,      -- unlock next zone
 },
 ```
 
-Rebuild / sync, then test purchases in Studio with a published place (IDs must be non-zero).
+Create passes/products in Creator Dashboard → paste IDs → rebuild → publish.
 
-Until IDs are set, Robux buttons show a toast: *Set … ID in Config.luau first*. Coin shop works without IDs.
+## Project layout
 
-## Monetization behavior (server-authoritative)
-
-| Offer | Effect |
-|-------|--------|
-| VIP | +50% harvest coins |
-| DoubleSpeed | Crops grow 2× faster |
-| AutoCollect | Auto-harvests ready plots |
-| CoinsSmall / CoinsBig | Grants coins via `ProcessReceipt` |
-| RareSeedPack | Grants Crystal / Melon / Berry seeds |
-| ZoneSkip | Unlocks the next locked zone |
-
-- Coin shop purchases validated on the server.
-- Game Pass ownership checked with `UserOwnsGamePassAsync` on join + purchase finished.
-- Dev Products fulfilled only inside `MarketplaceService.ProcessReceipt` (receipts deduped).
-- Clients cannot grant coins/items directly.
-
-## Publish checklist
-
-1. `rojo build -o SurgeGarden.rbxlx` and open in Studio.
-2. Publish the place.
-3. Create Game Passes + Dev Products; paste IDs into `Config.luau`.
-4. Rebuild / sync again and publish.
-5. Game Settings → Security: API Services on.
-6. Set experience name, icon, description, genre (Simulation / Idle).
-7. Test on phone emulator: shop UI, prompts, seed bar.
-8. Play test: plant → harvest → buy tool → unlock Meadow → try a Dev Product in a published test.
-
-## Tuning
-
-All balance knobs live in `Config.luau`: grow times, sell values, shop prices, pass multipliers, starting coins.
-
-## Tooling
-
-```bash
-selene src
-stylua src
-rojo build -o SurgeGarden.rbxlx
 ```
+src/ReplicatedStorage/Shared/     Config, remotes, types
+src/ServerScriptService/          Map, data, garden, monetization
+src/StarterPlayer/.../Client/     HUD, shop, harvest FX
+```
+
+## Publish tips (charts)
+
+1. Strong icon: lush farm + big gold coins + clear title.
+2. Thumbnail: plaza arch + growing fields.
+3. Description: Plant → Harvest → Unlock farms → Rebirth.
+4. Soft launch with VIP / 2x / Auto Collect priced for your audience.
+5. Keep first harvest under ~10 seconds (already tuned).

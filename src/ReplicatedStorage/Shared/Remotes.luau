@@ -11,8 +11,10 @@ export type RemoteBag = {
 	PromptGamePass: RemoteEvent,
 	PromptProduct: RemoteEvent,
 	RequestHud: RemoteEvent,
+	RequestRebirth: RemoteEvent,
 	HudUpdate: RemoteEvent,
 	Notify: RemoteEvent,
+	HarvestFx: RemoteEvent,
 }
 
 local NAMES = {
@@ -21,8 +23,10 @@ local NAMES = {
 	"PromptGamePass",
 	"PromptProduct",
 	"RequestHud",
+	"RequestRebirth",
 	"HudUpdate",
 	"Notify",
+	"HarvestFx",
 }
 
 local cached: RemoteBag? = nil

@@ -1,9 +1,5 @@
 --!strict
 
-export type SeedId = string
-export type ToolId = string
-export type ZoneId = string
-
 export type PlotSave = {
 	seedId: string?,
 	plantedAt: number,
@@ -17,6 +13,7 @@ export type PlayerData = {
 	unlockedZones: { [string]: boolean },
 	plots: { [string]: PlotSave },
 	ownedPasses: { [string]: boolean },
+	rebirths: number,
 	stats: {
 		planted: number,
 		harvested: number,
@@ -42,11 +39,22 @@ export type HudPayload = {
 	equippedTool: string,
 	selectedSeed: string,
 	ownedPasses: { [string]: boolean },
+	rebirths: number,
+	rebirthCost: number,
+	coinMult: number,
+	goalText: string,
 	stats: {
 		planted: number,
 		harvested: number,
 		earned: number,
 	},
+}
+
+export type HarvestFxPayload = {
+	plotId: string,
+	amount: number,
+	position: Vector3,
+	color: Color3,
 }
 
 return {}

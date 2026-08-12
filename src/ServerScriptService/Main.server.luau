@@ -27,7 +27,8 @@ local function onPlayer(player: Player)
 		local hrp = character:WaitForChild("HumanoidRootPart", 10)
 		if hrp and hrp:IsA("BasePart") then
 			local offset = MapBuilder.GetGardenOffset(player)
-			hrp.CFrame = CFrame.new(0 + offset.X, 6, 10 + offset.Z)
+			-- Spawn on the market plaza facing the homestead fields
+			hrp.CFrame = CFrame.new(offset.X, 6, -18 + offset.Z)
 		end
 	end)
 
@@ -35,7 +36,7 @@ local function onPlayer(player: Player)
 		local hrp = player.Character:FindFirstChild("HumanoidRootPart")
 		if hrp and hrp:IsA("BasePart") then
 			local offset = MapBuilder.GetGardenOffset(player)
-			hrp.CFrame = CFrame.new(0 + offset.X, 6, 10 + offset.Z)
+			hrp.CFrame = CFrame.new(offset.X, 6, -18 + offset.Z)
 		end
 	end
 end

@@ -11,6 +11,7 @@ local Types = require(Shared:WaitForChild("Types"))
 local Client = script.Parent:WaitForChild("Client")
 local Hud = require(Client:WaitForChild("Hud"))
 local ShopUi = require(Client:WaitForChild("ShopUi"))
+local Fx = require(Client:WaitForChild("Fx"))
 
 local player = Players.LocalPlayer
 local remotes = Remotes.Get()
@@ -21,12 +22,19 @@ end)
 
 local latest: Types.HudPayload? = nil
 
-Hud.Init(function()
-	ShopUi.Toggle()
-	if latest then
-		ShopUi.Refresh(latest)
-	end
-end)
+Fx.Init()
+
+Hud.Init({
+	openShop = function()
+		ShopUi.Toggle()
+		if latest then
+			ShopUi.Refresh(latest)
+		end
+	end,
+	rebirth = function()
+		remotes.RequestRebirth:FireServer()
+	end,
+})
 
 ShopUi.Init({
 	buyCoinItem = function(itemId: string)
@@ -47,20 +55,21 @@ end
 remotes.HudUpdate.OnClientEvent:Connect(function(payload: Types.HudPayload)
 	latest = payload
 	Hud.Update(payload, selectSeed)
-	if ShopUi.IsOpen() then
-		ShopUi.Refresh(payload)
-	end
+	ShopUi.Refresh(payload)
 end)
 
 remotes.Notify.OnClientEvent:Connect(function(kind: string, message: string)
 	Hud.Toast(kind, message)
 end)
 
--- Soft camera feel
+remotes.HarvestFx.OnClientEvent:Connect(function(payload: Types.HarvestFxPayload)
+	Fx.Harvest(payload)
+end)
+
 local function tuneCamera(character: Model)
 	local humanoid = character:WaitForChild("Humanoid", 5)
 	if humanoid and humanoid:IsA("Humanoid") then
-		humanoid.CameraOffset = Vector3.new(0, 1.5, 0)
+		humanoid.CameraOffset = Vector3.new(0, 2, 0)
 	end
 end
 
@@ -73,4 +82,4 @@ task.defer(function()
 	remotes.RequestHud:FireServer()
 end)
 
-print("[SurgeGarden] Client ready — walk to a dirt plot and hold the prompt")
+print("[SurgeGarden] Client ready — walk through the arch to your fields")
