@@ -14,48 +14,24 @@ local player = Players.LocalPlayer
 local gui: ScreenGui
 local brand: TextLabel
 local message: TextLabel
-local timer: TextLabel
-local meta: TextLabel
-local weapon: TextLabel
-local rank: TextLabel
-local combo: TextLabel
-local hpFill: Frame
-local xpFill: Frame
+local wave: TextLabel
+local lives: TextLabel
+local cash: TextLabel
+local selected: TextLabel
+local livesFill: Frame
 
-local function label(parent: Instance, size: UDim2, pos: UDim2, textSize: number, color: Color3, font: Enum.Font?): TextLabel
+local function label(parent: Instance, size: UDim2, pos: UDim2, textSize: number, color: Color3): TextLabel
 	local l = Instance.new("TextLabel")
 	l.BackgroundTransparency = 1
 	l.Size = size
 	l.Position = pos
-	l.Font = font or Enum.Font.GothamMedium
+	l.Font = Enum.Font.GothamMedium
 	l.TextSize = textSize
 	l.TextColor3 = color
 	l.TextXAlignment = Enum.TextXAlignment.Left
 	l.Text = ""
 	l.Parent = parent
 	return l
-end
-
-local function bar(parent: Instance, pos: UDim2, width: number, height: number, color: Color3): Frame
-	local bg = Instance.new("Frame")
-	bg.Size = UDim2.fromOffset(width, height)
-	bg.Position = pos
-	bg.BackgroundColor3 = Color3.fromRGB(8, 10, 16)
-	bg.BackgroundTransparency = 0.2
-	bg.BorderSizePixel = 0
-	bg.Parent = parent
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, 3)
-	c.Parent = bg
-	local fill = Instance.new("Frame")
-	fill.Size = UDim2.fromScale(1, 1)
-	fill.BackgroundColor3 = color
-	fill.BorderSizePixel = 0
-	fill.Parent = bg
-	local fc = Instance.new("UICorner")
-	fc.CornerRadius = UDim.new(0, 3)
-	fc.Parent = fill
-	return fill
 end
 
 function Hud.mount()
@@ -70,23 +46,31 @@ function Hud.mount()
 	gui.IgnoreGuiInset = true
 	gui.Parent = pg
 
-	brand = label(gui, UDim2.fromOffset(260, 26), UDim2.fromOffset(24, 18), 18, Config.Palette.Cyan, Enum.Font.GothamBlack)
+	brand = label(gui, UDim2.fromOffset(260, 26), UDim2.fromOffset(24, 18), 18, Config.Palette.Cyan)
+	brand.Font = Enum.Font.GothamBlack
 	brand.Text = Config.GameName
+
 	message = label(gui, UDim2.new(1, -48, 0, 20), UDim2.fromOffset(24, 46), 14, Config.Palette.Muted)
-	timer = label(gui, UDim2.fromOffset(160, 28), UDim2.new(0.5, -80, 0, 18), 22, Config.Palette.Text, Enum.Font.GothamBlack)
-	timer.TextXAlignment = Enum.TextXAlignment.Center
-	rank = label(gui, UDim2.fromOffset(120, 36), UDim2.new(1, -140, 0, 18), 28, Config.Palette.Gold, Enum.Font.GothamBlack)
-	rank.TextXAlignment = Enum.TextXAlignment.Right
-	meta = label(gui, UDim2.fromOffset(360, 18), UDim2.fromOffset(24, 78), 13, Config.Palette.Text)
-	weapon = label(gui, UDim2.fromOffset(280, 18), UDim2.fromOffset(24, 98), 13, Config.Palette.Cyan)
-	combo = label(gui, UDim2.fromOffset(160, 20), UDim2.fromOffset(24, 118), 14, Config.Palette.Lime, Enum.Font.GothamBold)
+	wave = label(gui, UDim2.fromOffset(220, 20), UDim2.fromOffset(24, 78), 15, Config.Palette.Text)
+	lives = label(gui, UDim2.fromOffset(180, 20), UDim2.fromOffset(24, 100), 15, Config.Palette.Danger)
+	cash = label(gui, UDim2.fromOffset(220, 20), UDim2.fromOffset(24, 122), 15, Config.Palette.Gold)
+	selected = label(gui, UDim2.fromOffset(320, 20), UDim2.fromOffset(24, 144), 14, Config.Palette.Cyan)
 
-	hpFill = bar(gui, UDim2.new(0, 24, 1, -52), 250, 9, Config.Palette.Cyan)
-	xpFill = bar(gui, UDim2.new(0, 24, 1, -36), 250, 5, Config.Palette.Violet)
+	local bg = Instance.new("Frame")
+	bg.Size = UDim2.fromOffset(240, 8)
+	bg.Position = UDim2.new(0, 24, 1, -40)
+	bg.BackgroundColor3 = Color3.fromRGB(8, 10, 16)
+	bg.BorderSizePixel = 0
+	bg.Parent = gui
+	livesFill = Instance.new("Frame")
+	livesFill.Size = UDim2.fromScale(1, 1)
+	livesFill.BackgroundColor3 = Config.Palette.Violet
+	livesFill.BorderSizePixel = 0
+	livesFill.Parent = bg
 
-	local hint = label(gui, UDim2.fromOffset(420, 16), UDim2.new(1, -444, 1, -38), 12, Config.Palette.Muted)
+	local hint = label(gui, UDim2.fromOffset(520, 16), UDim2.new(1, -544, 1, -40), 12, Config.Palette.Muted)
 	hint.TextXAlignment = Enum.TextXAlignment.Right
-	hint.Text = "Q dash · F slam · Space×2 · 1/2/3 weapons · pads launch"
+	hint.Text = "1-4 select tower · LMB place/upgrade · RMB sell · R lobby"
 end
 
 function Hud.setVisible(v: boolean)
@@ -99,25 +83,20 @@ function Hud.apply(s: HudSnapshot)
 	if not gui then
 		return
 	end
-	local mins = math.floor(s.timeLeft / 60)
-	local secs = math.floor(s.timeLeft % 60)
-	timer.Text = string.format("%d:%02d", mins, secs)
-	rank.Text = s.styleRank
-	meta.Text = ("Score %d  ·  Style %d  ·  Lv %d  ·  Kills %d"):format(s.score, s.style, s.level, s.kills)
-	weapon.Text = s.weapon
-	combo.Text = if s.combo > 1 then ("x%d"):format(s.combo) else ""
+	wave.Text = ("Wave %d / %d   ·   Hostiles %d"):format(s.wave, s.maxWaves, s.enemiesAlive)
+	lives.Text = ("Core integrity  %d"):format(s.lives)
+	cash.Text = ("Cash  $%d   ·   Bank %d cr"):format(s.cash, s.creditsBank)
+	selected.Text = ("Build: %s"):format(s.selectedTower or "Pulse")
 
-	local hp = if s.maxHealth > 0 then s.health / s.maxHealth else 0
-	local xp = if s.xpNeed > 0 then s.xp / s.xpNeed else 0
-	TweenService:Create(hpFill, TweenInfo.new(0.1), {
-		Size = UDim2.fromScale(math.clamp(hp, 0, 1), 1),
-		BackgroundColor3 = if hp < 0.28 then Config.Palette.Danger else Config.Palette.Cyan,
+	local ratio = math.clamp(s.lives / Config.Core.MaxLives, 0, 1)
+	TweenService:Create(livesFill, TweenInfo.new(0.15), {
+		Size = UDim2.fromScale(ratio, 1),
+		BackgroundColor3 = if ratio < 0.3 then Config.Palette.Danger else Config.Palette.Violet,
 	}):Play()
-	TweenService:Create(xpFill, TweenInfo.new(0.1), { Size = UDim2.fromScale(math.clamp(xp, 0, 1), 1) }):Play()
 
 	local msg = s.message
 	if s.countdown and s.countdown > 0 then
-		msg = ("%s  %d"):format(s.message or "", s.countdown)
+		msg = ("%s   %d"):format(s.message or "", s.countdown)
 	end
 	if msg then
 		message.Text = msg

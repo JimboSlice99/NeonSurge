@@ -49,18 +49,17 @@ function Lobby.mount(playCallback: () -> ())
 	gui.Parent = pg
 
 	local panel = Instance.new("Frame")
-	panel.Size = UDim2.fromOffset(390, 560)
-	panel.Position = UDim2.new(1, -414, 0.5, -280)
+	panel.Size = UDim2.fromOffset(400, 560)
+	panel.Position = UDim2.new(0, 24, 0.5, -280)
 	panel.BackgroundColor3 = Config.Palette.Panel
-	panel.BackgroundTransparency = 0.06
+	panel.BackgroundTransparency = 0.05
 	panel.BorderSizePixel = 0
 	panel.Parent = gui
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0, 12)
 	corner.Parent = panel
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.fromRGB(36, 48, 64)
-	stroke.Thickness = 1
+	stroke.Color = Color3.fromRGB(40, 55, 70)
 	stroke.Parent = panel
 
 	local title = Instance.new("TextLabel")
@@ -76,20 +75,20 @@ function Lobby.mount(playCallback: () -> ())
 
 	local tag = Instance.new("TextLabel")
 	tag.BackgroundTransparency = 1
-	tag.Size = UDim2.new(1, -28, 0, 36)
+	tag.Size = UDim2.new(1, -28, 0, 40)
 	tag.Position = UDim2.fromOffset(14, 50)
 	tag.Font = Enum.Font.Gotham
 	tag.TextSize = 13
 	tag.TextWrapped = true
 	tag.TextXAlignment = Enum.TextXAlignment.Left
 	tag.TextColor3 = Config.Palette.Muted
-	tag.Text = "3:00 district missions · dash, double-jump, slam · unlock weapons mid-run · chase SS rank"
+	tag.Text = "Tower defense. Place neon nodes on the conduit path. Keep hostiles from breaching the Surge Core."
 	tag.Parent = panel
 
 	creditsLabel = Instance.new("TextLabel")
 	creditsLabel.BackgroundTransparency = 1
 	creditsLabel.Size = UDim2.new(1, -28, 0, 20)
-	creditsLabel.Position = UDim2.fromOffset(14, 96)
+	creditsLabel.Position = UDim2.fromOffset(14, 100)
 	creditsLabel.Font = Enum.Font.GothamBold
 	creditsLabel.TextSize = 15
 	creditsLabel.TextXAlignment = Enum.TextXAlignment.Left
@@ -100,15 +99,15 @@ function Lobby.mount(playCallback: () -> ())
 	bestLabel = Instance.new("TextLabel")
 	bestLabel.BackgroundTransparency = 1
 	bestLabel.Size = UDim2.new(1, -28, 0, 18)
-	bestLabel.Position = UDim2.fromOffset(14, 118)
+	bestLabel.Position = UDim2.fromOffset(14, 122)
 	bestLabel.Font = Enum.Font.Gotham
 	bestLabel.TextSize = 13
 	bestLabel.TextXAlignment = Enum.TextXAlignment.Left
 	bestLabel.TextColor3 = Config.Palette.Muted
-	bestLabel.Text = "Best 0 · Rank D"
+	bestLabel.Text = "Best wave 0"
 	bestLabel.Parent = panel
 
-	local play = btn(panel, "START MISSION", UDim2.new(1, -28, 0, 48), UDim2.fromOffset(14, 150), Config.Palette.Cyan, Color3.fromRGB(8, 14, 20))
+	local play = btn(panel, "START DEFENSE", UDim2.new(1, -28, 0, 48), UDim2.fromOffset(14, 152), Config.Palette.Cyan, Color3.fromRGB(8, 14, 20))
 	play.TextSize = 18
 	play.Font = Enum.Font.GothamBlack
 	play.MouseButton1Click:Connect(function()
@@ -121,18 +120,18 @@ function Lobby.mount(playCallback: () -> ())
 	local shop = Instance.new("TextLabel")
 	shop.BackgroundTransparency = 1
 	shop.Size = UDim2.new(1, -28, 0, 18)
-	shop.Position = UDim2.fromOffset(14, 214)
+	shop.Position = UDim2.fromOffset(14, 216)
 	shop.Font = Enum.Font.GothamBold
 	shop.TextSize = 12
 	shop.TextXAlignment = Enum.TextXAlignment.Left
 	shop.TextColor3 = Config.Palette.Text
-	shop.Text = "LOADOUT"
+	shop.Text = "PERMANENT OPS"
 	shop.Parent = panel
 
 	metaFrame = Instance.new("Frame")
 	metaFrame.BackgroundTransparency = 1
 	metaFrame.Size = UDim2.new(1, -28, 0, 210)
-	metaFrame.Position = UDim2.fromOffset(14, 236)
+	metaFrame.Position = UDim2.fromOffset(14, 238)
 	metaFrame.Parent = panel
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, 6)
@@ -141,7 +140,7 @@ function Lobby.mount(playCallback: () -> ())
 	local pass = Instance.new("TextLabel")
 	pass.BackgroundTransparency = 1
 	pass.Size = UDim2.new(1, -28, 0, 16)
-	pass.Position = UDim2.fromOffset(14, 456)
+	pass.Position = UDim2.fromOffset(14, 460)
 	pass.Font = Enum.Font.GothamBold
 	pass.TextSize = 11
 	pass.TextXAlignment = Enum.TextXAlignment.Left
@@ -151,12 +150,12 @@ function Lobby.mount(playCallback: () -> ())
 
 	local products = {
 		{ "2× Credits", "DoubleCredits" },
-		{ "VIP Aura", "VipTrail" },
-		{ "Dash+", "ExtraDash" },
+		{ "Cash Bundle", "StarterCash" },
+		{ "VIP Skin", "VipSkin" },
 		{ "+500", "CreditPackSmall" },
 	}
 	for i, row in products do
-		local b = btn(panel, row[1], UDim2.fromOffset(84, 30), UDim2.fromOffset(14 + (i - 1) * 90, 480), Color3.fromRGB(20, 26, 40), Config.Palette.Text)
+		local b = btn(panel, row[1], UDim2.fromOffset(86, 30), UDim2.fromOffset(14 + (i - 1) * 92, 484), Color3.fromRGB(20, 26, 40), Config.Palette.Text)
 		b.TextSize = 11
 		b.MouseButton1Click:Connect(function()
 			Remotes.get("RequestBuyProduct"):FireServer(row[2])
@@ -175,7 +174,7 @@ function Lobby.apply(snapshot: LobbySnapshot)
 		return
 	end
 	creditsLabel.Text = ("Credits  %d"):format(snapshot.credits)
-	bestLabel.Text = ("Best %d  ·  Rank %s"):format(snapshot.highScore, snapshot.bestRank)
+	bestLabel.Text = ("Best wave %d  ·  High score %d"):format(snapshot.bestWave, snapshot.highScore)
 	for _, child in metaFrame:GetChildren() do
 		if child:IsA("TextButton") then
 			child:Destroy()

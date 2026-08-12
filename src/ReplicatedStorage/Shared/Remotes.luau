@@ -6,20 +6,18 @@ local Config = require(script.Parent.Config)
 local Remotes = {}
 
 local NAMES = {
-	"RequestFire",
-	"RequestDash",
-	"RequestSlam",
-	"RequestWeapon",
 	"RequestStartRun",
 	"RequestRestart",
+	"RequestPlaceTower",
+	"RequestUpgradeTower",
+	"RequestSellTower",
+	"RequestSelectBuild",
+	"RequestStartWave",
 	"RequestBuyMeta",
 	"RequestBuyProduct",
-	"ChooseUpgrade",
 	"HudUpdate",
 	"LobbyUpdate",
-	"UpgradeChoices",
 	"FxBurst",
-	"StylePop",
 }
 
 local function folder(): Folder

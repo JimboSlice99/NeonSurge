@@ -10,19 +10,11 @@ local MonetizationService = {}
 
 local ownedCache: { [Player]: { [string]: boolean } } = {}
 
-local function passId(key: string): number
-	return Config.Monetization.Gamepasses[key] or 0
-end
-
-local function productId(key: string): number
-	return Config.Monetization.DevProducts[key] or 0
-end
-
 local function refreshOwns(player: Player)
 	ownedCache[player] = {
 		DoubleCredits = false,
-		VipTrail = false,
-		ExtraDash = false,
+		StarterCash = false,
+		VipSkin = false,
 	}
 	for key, id in Config.Monetization.Gamepasses do
 		if typeof(id) == "number" and id > 0 then
@@ -58,9 +50,8 @@ function MonetizationService.init()
 		if not player then
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
-
-		local small = productId("CreditPackSmall")
-		local large = productId("CreditPackLarge")
+		local small = Config.Monetization.DevProducts.CreditPackSmall
+		local large = Config.Monetization.DevProducts.CreditPackLarge
 		if receipt.ProductId == small and small > 0 then
 			DataService.addCredits(player, Config.Monetization.PackCredits.Small)
 			return Enum.ProductPurchaseDecision.PurchaseGranted
@@ -68,7 +59,6 @@ function MonetizationService.init()
 			DataService.addCredits(player, Config.Monetization.PackCredits.Large)
 			return Enum.ProductPurchaseDecision.PurchaseGranted
 		end
-
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 end
@@ -83,18 +73,18 @@ function MonetizationService.owns(player: Player, key: string): boolean
 end
 
 function MonetizationService.promptGamepass(player: Player, key: string)
-	local id = passId(key)
-	if id <= 0 then
-		warn(("[NeonSurge] Gamepass '%s' ID not set in Config"):format(key))
+	local id = Config.Monetization.Gamepasses[key]
+	if typeof(id) ~= "number" or id <= 0 then
+		warn(("[NeonSurge] Gamepass '%s' ID not set"):format(key))
 		return
 	end
 	MarketplaceService:PromptGamePassPurchase(player, id)
 end
 
 function MonetizationService.promptProduct(player: Player, key: string)
-	local id = productId(key)
-	if id <= 0 then
-		warn(("[NeonSurge] DevProduct '%s' ID not set in Config"):format(key))
+	local id = Config.Monetization.DevProducts[key]
+	if typeof(id) ~= "number" or id <= 0 then
+		warn(("[NeonSurge] Product '%s' ID not set"):format(key))
 		return
 	end
 	MarketplaceService:PromptProductPurchase(player, id)
